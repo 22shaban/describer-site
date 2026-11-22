@@ -6,6 +6,10 @@ Turn images, screenshots, PDFs and short videos into text that you can paste int
 
 **Live demo:** https://22shaban.github.io/describer-site/ (also on Cloudflare: https://imagedescriber.shabanshaikhit.workers.dev)
 
+![Image Describer home screen with four tool cards](docs/screenshots/home.png)
+
+![The Describe tab with the Add images button and a three-step getting started guide](docs/screenshots/describe.png)
+
 ## Why it exists
 
 Free AI chat plans cap how many files you can attach each day, and text pastes don't count toward that cap. This tool uses a vision model to write a detailed, structured description of an image, then helps you check it, fix it and paste it.
