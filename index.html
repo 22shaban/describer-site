@@ -1,0 +1,2506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image Describer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#000000">
+<script>try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;var c=localStorage.getItem('contrast');if(c==='high')document.documentElement.dataset.contrast='high'}catch(e){}</script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root {
+  --bg: #000; --ink: #fff; --ink2: #e8e8e8; --muted: #a8a8a8; --line: #303030; --card: #0d0d0e;
+  --panel: rgba(5, 5, 5, .82); --glass: rgba(0, 0, 0, .35); --menu: rgba(0, 0, 0, .45); --menu-open: rgba(0, 0, 0, .97);
+  --g: #70f37d; --gt: #70f37d; --on-g: #000; --warn: #ffb454; --ph: #7d7d7d; --soft: rgba(255, 255, 255, .04);
+  --overlay: rgba(0, 0, 0, .72); --rain-op: .5; --pre: #cfcfcf; --hover-bg: #000; --hover-ink: #fcfcfc; --shadow: rgba(0, 0, 0, .2);
+}
+:root[data-theme="light"] {
+  --bg: #f3f6f4; --ink: #0b0f0c; --ink2: #1d2520; --muted: #566159; --line: #c9d3cc; --card: #fff;
+  --panel: rgba(255, 255, 255, .88); --glass: rgba(255, 255, 255, .6); --menu: rgba(255, 255, 255, .72); --menu-open: rgba(255, 255, 255, .98);
+  --g: #70f37d; --gt: #0a6b2b; --on-g: #000; --warn: #8a4b00; --ph: #6f7872; --soft: rgba(0, 0, 0, .04);
+  --overlay: rgba(255, 255, 255, .72); --rain-op: .38; --pre: #3a443d; --hover-bg: #0b0f0c; --hover-ink: #fff; --shadow: rgba(0, 0, 0, .08);
+}
+* { box-sizing: border-box; }
+html { color-scheme: dark; scroll-behavior: smooth; }
+html[data-theme="light"] { color-scheme: light; }
+body {
+  margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 "Inter Tight", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+::selection { background: var(--g); color: #000; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; }
+}
+
+/* ---- rain behind everything ---- */
+#rain { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; opacity: var(--rain-op); pointer-events: none; }
+
+/* ---- navbar ---- */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 30; }
+.nav-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 5vw; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-weight: 600; font-size: 18px; letter-spacing: -.01em; }
+.brand svg rect, .brand svg path { stroke: var(--gt); }
+.menu {
+  display: flex; align-items: center; gap: 2px; padding: 4px 8px 4px 6px;
+  border: 1px solid var(--line); border-radius: 50px;
+  background: var(--menu); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.menu a, .menu .linklike {
+  color: var(--ink); background: none; border: 0; padding: 10px 15px; font: inherit; font-weight: 400;
+  text-decoration: none; cursor: pointer; border-radius: 50px;
+}
+.menu a:hover, .menu .linklike:hover { opacity: .65; color: var(--ink); }
+.menu .pill { margin-left: 10px; padding: 9px 17px; font-size: 14px; }
+.burger { display: none; width: 48px; height: 48px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--menu); flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+.burger span { display: block; width: 22px; height: 2px; background: var(--gt); border-radius: 2px; }
+@media (max-width: 900px) {
+  .burger { display: flex; }
+  .menu { display: none; }
+  .menu.open {
+    display: flex; flex-direction: column; align-items: stretch; gap: 0;
+    position: absolute; top: 100%; left: 5vw; right: 5vw; border-radius: 20px; padding: 10px 16px; background: var(--menu-open);
+  }
+  .menu.open a, .menu.open .linklike { text-align: left; padding: 12px 6px; }
+  .menu.open .pill { margin: 8px 0 4px; text-align: center; }
+}
+
+/* ---- hero ---- */
+.hero { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; padding: 8px 0 24px; }
+.hero-card {
+  width: 100%; max-width: 480px; padding: 40px;
+  border: 1px solid var(--line); border-radius: 20px; background: var(--glass);
+  -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); box-shadow: 0 5px 20px var(--shadow);
+}
+.hero h1 { text-wrap: balance; margin: 0 0 12px; font-size: 38px; line-height: 1.12; font-weight: 500; letter-spacing: -.02em; }
+.hero p { margin: 0 0 22px; font-size: 16px; font-weight: 300; line-height: 1.6; }
+.hero .hero-hint { margin: 14px 0 0; font-size: 13.5px; font-weight: 400; color: var(--muted); }
+@media (max-width: 560px) { .hero-card { padding: 28px; } .hero h1 { font-size: 32px; } }
+
+/* ---- layout ---- */
+main { position: relative; z-index: 2; max-width: 980px; margin: 0 auto; padding: 8px 16px 72px; }
+.panel {
+  background: var(--panel); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border: 1px solid var(--line); border-radius: 20px; padding: 24px; margin-bottom: 16px;
+  box-shadow: 0 5px 20px var(--shadow); scroll-margin-top: 96px;
+}
+details.panel > summary { cursor: pointer; font-weight: 500; font-size: 16px; }
+details.panel > summary::marker { color: var(--gt); }
+details.panel[open] > summary { margin-bottom: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
+.row + .row { margin-top: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 170px; }
+.field label { font-size: 13px; color: var(--muted); }
+.field:has(:disabled) { opacity: .5; }
+.hint { font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
+.checks { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 16px; }
+.checks label { font-size: 14px; color: var(--ink2); }
+.checks label:has(:disabled) { opacity: .5; }
+.empty { color: var(--muted); text-align: center; padding: 22px 12px; margin: 0; border: 1px dashed var(--line); border-radius: 16px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.stats { color: var(--muted); font-size: 13.5px; margin-left: auto; }
+
+/* ---- controls ---- */
+input, select, textarea, button { font: inherit; color: inherit; }
+input[type=password], input[type=text], input[type=number], select, textarea {
+  min-width: 0; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%;
+}
+input::placeholder, textarea::placeholder { color: var(--ph); }
+textarea { min-height: 140px; resize: vertical; }
+textarea.big { min-height: 260px; font-family: ui-monospace, Consolas, "Cascadia Mono", monospace; font-size: 13.5px; }
+input[type=checkbox] { accent-color: var(--gt); width: 16px; height: 16px; vertical-align: -3px; margin: 0 8px 0 0; }
+input:focus, select:focus, textarea:focus { border-color: var(--gt); }
+:is(button, input, select, textarea, summary, a):focus-visible { outline: 2px solid var(--gt); outline-offset: 3px; }
+
+button {
+  white-space: nowrap; cursor: pointer; padding: 9px 18px; border-radius: 50px; border: 1px solid var(--line); background: var(--soft);
+}
+button:hover:not(:disabled) { border-color: var(--gt); color: var(--gt); }
+button.primary, button.pill { background: var(--g); color: var(--on-g); border-color: var(--g); font-weight: 500; }
+button.primary:hover:not(:disabled), button.pill:hover:not(:disabled) { background: var(--hover-bg); color: var(--hover-ink); border-color: var(--gt); }
+button.small { padding: 4px 12px; font-size: 13px; }
+button.big { padding: 13px 30px; font-size: 16px; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ---- image rows ---- */
+.item {
+  display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 14px; margin-bottom: 12px;
+  background: var(--panel); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border: 1px solid var(--line); border-radius: 16px;
+}
+.item img { width: 110px; height: 110px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: var(--card); }
+.item header { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin-bottom: 8px; flex-wrap: wrap; }
+.name { font-weight: 500; overflow-wrap: anywhere; }
+.status { color: var(--muted); }
+.status.err { color: var(--warn); }
+.acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.review { margin-top: 8px; font-size: 14px; }
+.review summary { cursor: pointer; color: var(--muted); }
+.review pre, .part pre { white-space: pre-wrap; margin: 6px 0 0; font: inherit; color: var(--pre); }
+@media (max-width: 560px) { .item { grid-template-columns: 1fr; } .item img { width: 100%; height: 170px; } }
+
+/* ---- output, parts, history ---- */
+.intro { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.part { padding: 10px 0; border-top: 1px solid var(--line); }
+.part .top { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.hist { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.hist img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: var(--card); }
+.hist .meta { font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+@media (max-width: 560px) { .hist { grid-template-columns: 56px 1fr; } .hist .acts { grid-column: 1 / -1; } }
+
+/* ---- dialogs ---- */
+dialog { border: 1px solid var(--line); border-radius: 20px; background: var(--card); color: var(--ink); padding: 22px; max-width: min(920px, 96vw); width: 100%; }
+dialog::backdrop { background: var(--overlay); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.zwrap { position: relative; display: block; width: fit-content; max-width: 100%; margin: 12px auto; touch-action: none; cursor: crosshair; user-select: none; }
+.zwrap img { display: block; max-width: 100%; max-height: 62vh; border-radius: 8px; }
+.sel { position: absolute; border: 2px solid var(--gt); background: rgba(112, 243, 125, .2); pointer-events: none; display: none; }
+.prevframe { width: 100%; height: 68vh; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.csvwrap { max-height: 68vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+.csvwrap table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.csvwrap th, .csvwrap td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; white-space: nowrap; }
+.csvwrap th { position: sticky; top: 0; background: var(--card); font-weight: 600; }
+
+/* ---- drop anywhere ---- */
+#dropOverlay {
+  position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; margin: 16px;
+  background: var(--overlay); color: var(--gt); font-size: 28px; font-weight: 500;
+  border: 2px dashed var(--gt); border-radius: 24px; pointer-events: none;
+}
+body.dragging #dropOverlay { display: flex; }
+
+progress { width: 180px; height: 8px; accent-color: var(--gt); vertical-align: middle; }
+.acctable td { white-space: normal; vertical-align: top; min-width: 120px; }
+.v-good { color: var(--gt); font-weight: 600; }
+.v-bad { color: var(--warn); font-weight: 600; }
+
+/* ---- round 3: layout and accessibility ---- */
+.skip { position: absolute; left: 12px; top: -60px; z-index: 100; background: var(--g); color: #000; padding: 10px 16px; border-radius: 50px; font-weight: 600; text-decoration: none; }
+.skip:focus { top: 12px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.guide strong { font-size: 16px; }
+.guide ol { margin: 8px 0 0; padding-left: 22px; color: var(--ink2); }
+.guide li { margin: 4px 0; }
+.guide a { color: var(--gt); }
+.remember { display: block; margin-top: 14px; font-size: 14px; color: var(--ink2); }
+details.adv { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+details.adv > summary { cursor: pointer; font-weight: 500; }
+details.adv > summary::marker { color: var(--gt); }
+details.adv[open] > summary { margin-bottom: 14px; }
+#list { scroll-margin-top: 90px; }
+.actionbar { position: sticky; bottom: 12px; z-index: 20; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 20px; background: var(--menu-open); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 5px 20px var(--shadow); }
+.actionbar[hidden] { display: none; }
+.ab-main { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ab-est { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); }
+.ab-est:empty { display: none; }
+progress { width: 180px; height: 8px; accent-color: var(--gt); vertical-align: middle; }
+#toast { position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 55; display: flex; gap: 12px; align-items: center; padding: 10px 16px; border: 1px solid var(--line); border-radius: 50px; background: var(--menu-open); box-shadow: 0 5px 20px var(--shadow); max-width: 92vw; }
+#toast[hidden] { display: none; }
+button.thumb { padding: 0; border: 0; background: none; border-radius: 10px; width: 110px; height: 110px; min-height: 0; cursor: zoom-in; }
+button.thumb:hover:not(:disabled) { border-color: transparent; color: inherit; }
+textarea.collapsed { height: 5.4em; min-height: 0; overflow: hidden; resize: none; }
+.meterrow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: -2px 0 12px; }
+meter { width: 160px; height: 10px; }
+.stats.warn { color: var(--warn); }
+.stats.bad { color: var(--warn); font-weight: 600; }
+body.scrolled .nav { background: var(--menu-open); border-bottom: 1px solid var(--line); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+#rain { transition: opacity .6s; }
+body.working #rain { opacity: calc(var(--rain-op) * .45); }
+:root[data-contrast="high"] { --line: #8f8f8f; --muted: #d6d6d6; --ph: #b5b5b5; --ink2: #fff; --rain-op: .25; }
+:root[data-theme="light"][data-contrast="high"] { --line: #555; --muted: #2c352f; --ph: #4a524d; --ink2: #000; --rain-op: .18; }
+@media (max-width: 600px) {
+  input, select, textarea { font-size: 16px; }
+  button { min-height: 44px; }
+  button.small { min-height: 40px; }
+  button.thumb { min-height: 0; width: 100%; height: 170px; }
+  .hero { padding-top: 0; }
+  .panel { padding: 16px; }
+  .actionbar { bottom: 8px; border-radius: 16px; }
+  .ab-main button.primary { flex: 1 1 100%; }
+  #toast { bottom: 118px; }
+}
+.item.drop-target { outline: 2px dashed var(--gt); outline-offset: 2px; }
+.item.dragging-item { opacity: .45; }
+button.grip { cursor: grab; }
+.diffview { font-family: ui-monospace, Consolas, "Cascadia Mono", monospace; font-size: 13px; max-height: 66vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 8px 0; }
+.dl { padding: 1px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dl.add { background: rgba(112, 243, 125, .16); }
+.dl.del { background: rgba(255, 180, 84, .16); }
+.dl.gap { color: var(--muted); font-style: italic; }
+.diffnote { white-space: pre-wrap; color: var(--muted); font-size: 13.5px; margin: 0 0 10px; }
+ul.plain { margin: 0; padding-left: 20px; color: var(--ink2); }
+ul.plain li { margin: 6px 0; }
+.sech { font-size: 20px; font-weight: 500; margin: 28px 0 6px; }
+.toolsec { scroll-margin-top: 90px; }
+.icard { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 12px; background: var(--card); }
+.icard h3 { margin: 0 0 6px; font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+.icard .verdict { font-weight: 600; margin: 0 0 6px; }
+.icard .verdict.ai { color: var(--warn); }
+.icard .verdict.ok { color: var(--gt); }
+.icard ul { margin: 6px 0 10px; padding-left: 20px; }
+.icard table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.icard th, .icard td { border-top: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.icard th { width: 32%; color: var(--muted); font-weight: 400; }
+.icard a { color: var(--gt); }
+.srow { display: grid; grid-template-columns: 64px 64px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.srow img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+main { padding-top: 0; }
+.tabsbar { position: sticky; top: 80px; z-index: 25; display: flex; gap: 6px; overflow-x: auto; padding: 6px; margin: 100px 0 18px; border: 1px solid var(--line); border-radius: 50px; background: var(--menu-open); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); scrollbar-width: none; }
+.tabsbar::-webkit-scrollbar { display: none; }
+.tabsbar a { white-space: nowrap; padding: 9px 20px; border-radius: 50px; color: var(--ink); text-decoration: none; }
+.tabsbar a:hover:not(.on) { background: var(--soft); }
+.tabsbar a.on { background: var(--g); color: #000; font-weight: 600; }
+.view[hidden] { display: none; }
+.viewhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 4px 0 14px; }
+.viewh { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: -.01em; outline: none; }
+.home h1.viewh { font-size: 38px; line-height: 1.12; letter-spacing: -.02em; }
+.lead2 { margin: 8px 0 0; max-width: 62ch; color: var(--ink2); font-weight: 300; font-size: 16px; }
+.badge { display: inline-block; font-size: 12.5px; padding: 3px 10px; border-radius: 50px; border: 1px solid var(--line); white-space: normal; }
+.badge.local { color: var(--gt); border-color: var(--gt); }
+.badge.sends { color: var(--warn); border-color: var(--warn); }
+.cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 22px 0 16px; }
+.tcard { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 22px; border: 1px solid var(--line); border-radius: 20px; background: var(--panel); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); text-decoration: none; color: var(--ink); box-shadow: 0 5px 20px var(--shadow); }
+.tcard:hover { border-color: var(--gt); }
+.tcard .tt { font-size: 19px; font-weight: 500; }
+.tcard .td { color: var(--ink2); font-weight: 300; flex: 1; }
+.disp { position: relative; }
+.disp-panel { position: absolute; right: 0; top: calc(100% + 12px); min-width: 190px; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: var(--menu-open); display: flex; flex-direction: column; gap: 2px; box-shadow: 0 5px 20px var(--shadow); z-index: 40; }
+.disp-panel[hidden] { display: none; }
+.disp-panel .linklike { text-align: left; padding: 10px 14px; }
+figure.thumbfig { margin: 0; text-align: center; }
+figure.thumbfig img { display: block; width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+figure.thumbfig figcaption { font-size: 12px; color: var(--muted); }
+@media (max-width: 900px) {
+  .tabsbar { top: 72px; margin-top: 92px; }
+  .menu.open #dispBtn { display: none; }
+  .menu.open .disp-panel { display: flex !important; position: static; border: 0; box-shadow: none; background: none; padding: 0; min-width: 0; }
+  .menu.open .disp-panel .linklike { padding: 12px 6px; }
+}
+@media (max-width: 700px) { .cards { grid-template-columns: 1fr; } .home h1.viewh { font-size: 32px; } .srow { grid-template-columns: 64px 64px 1fr; } .srow .dl-link { grid-column: 1 / -1; justify-self: start; } }
+</style>
+</head>
+<body>
+<canvas id="rain" aria-hidden="true"></canvas>
+<div id="dropOverlay" aria-hidden="true">Drop images to add them</div>
+
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="nav" id="top">
+  <div class="nav-in">
+    <a class="brand" href="#home" aria-label="Image Describer, home">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" stroke="#70f37d" stroke-width="2"/><path d="M9 8v12M14 6v16M19 10v10" stroke="#70f37d" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Image Describer</span>
+    </a>
+    <button class="burger" id="navToggle" type="button" aria-expanded="false" aria-controls="navMenu" aria-label="Open menu"><span></span><span></span><span></span></button>
+    <nav class="menu" id="navMenu" aria-label="Main">
+      <a href="#tool" data-open="tool" data-view="describe">Settings</a>
+      <a href="#backup" data-open="backup" data-view="describe">Providers</a>
+      <a href="#histPanel" data-open="histPanel" data-view="describe">History</a>
+      <div class="disp" id="disp">
+        <button type="button" class="linklike" id="dispBtn" aria-expanded="false" aria-controls="dispPanel">Display</button>
+        <div class="disp-panel" id="dispPanel" role="group" aria-label="Display options" hidden>
+          <button type="button" class="linklike" id="rainToggle" aria-pressed="true">Rain: on</button>
+          <button type="button" class="linklike" id="themeToggle" aria-label="Switch to light theme">Theme: dark</button>
+          <button type="button" class="linklike" id="contrastToggle" aria-pressed="false">Contrast: normal</button>
+        </div>
+      </div>
+      <button type="button" class="pill" id="navAdd">Add images</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main" tabindex="-1">
+  <nav class="tabsbar" id="tabs" aria-label="Tools">
+    <a href="#describe" data-tab="describe">Describe</a>
+    <a href="#inspect" data-tab="inspect">Check AI signals</a>
+    <a href="#shrink" data-tab="shrink">Shrink</a>
+    <a href="#pdf" data-tab="pdf">PDF</a>
+  </nav>
+  <div class="view" id="view-home">
+    <section class="home">
+      <h1 class="viewh" tabindex="-1">Image tools</h1>
+      <p class="lead2">Turn images into text for any AI chat, check a picture for AI signals, or make images smaller. Pick a tool.</p>
+      <div class="cards">
+        <a class="tcard" href="#describe"><span class="tt">Describe an image</span><span class="td">Turn screenshots, photos, PDFs and videos into text, code, diagrams or data you can paste into an AI chat.</span><span class="badge sends">Sends your images to the AI service you choose</span></a>
+        <a class="tcard" href="#inspect"><span class="tt">Check AI signals</span><span class="td">Read the labels hidden in a file: Content Credentials, AI tools named, generator settings, camera and location data.</span><span class="badge local">Stays on your device</span></a>
+        <a class="tcard" href="#shrink"><span class="tt">Shrink and convert</span><span class="td">Make images smaller or change their format so they fit an upload limit.</span><span class="badge local">Stays on your device</span></a>
+        <a class="tcard" href="#pdf"><span class="tt">Images to one PDF</span><span class="td">Put your images in a single PDF, so it counts as one upload.</span><span class="badge local">Stays on your device</span></a>
+      </div>
+    </section>
+  </div>
+  <div class="view" id="view-describe" hidden>
+    <div class="viewhead" style="justify-content:center"><span class="badge sends">Sends your images to the AI service you choose</span></div>
+<section class="hero">
+  <div class="hero-card">
+    <h1 class="viewh" tabindex="-1">Turn any image into text</h1>
+    <p>Describe screenshots, photos and diagrams in detail, then paste the text into ChatGPT or any AI instead of attaching the image.</p>
+    <button type="button" class="primary big" id="drop">Add images</button>
+    <button type="button" class="small" id="addFolder" style="margin-left:10px">Add a folder</button>
+    <input id="folder" type="file" webkitdirectory multiple hidden>
+    <input id="file" type="file" accept="image/*,application/pdf,.pdf,video/*" multiple hidden>
+    <p class="hero-hint">Drop files anywhere on this page, or paste with Ctrl+V. PNG, JPG, WEBP, HEIC, PDF and short videos work.</p>
+  </div>
+</section>
+
+  <section class="panel guide" id="guide">
+    <strong>Getting started takes about a minute</strong>
+    <ol>
+      <li>Get a free key at <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com</a>. Sign in with Google, then choose Create API key.</li>
+      <li>Paste it below and click Test key.</li>
+      <li>Add an image, a screenshot or a PDF, then click Describe images.</li>
+    </ol>
+  </section>
+
+  <div class="panel" id="tool">
+    <div class="row">
+      <div class="field" style="flex:2 1 320px">
+        <label for="key">Your Gemini key</label>
+        <div style="display:flex;gap:8px">
+          <input id="key" type="password" autocomplete="off" placeholder="Paste your key">
+          <button type="button" id="keyTest">Test key</button>
+        </div>
+      </div>
+    </div>
+    <p class="hint" id="keyMsg" role="status" style="margin-top:6px"></p>
+    <div class="row">
+      <div class="field" style="flex:1.2 1 220px">
+        <label for="preset">Preset</label>
+        <select id="preset"><option value="">Choose a preset...</option></select>
+      </div>
+      <div class="field" style="flex:1.6 1 260px">
+        <label for="out">What do you want?</label>
+        <select id="out">
+          <option value="describe">A written description</option>
+          <option value="code">HTML and CSS code (for screenshots)</option>
+          <option value="mermaid">A Mermaid diagram (for diagrams)</option>
+          <option value="csv">Data as CSV (for charts and tables)</option>
+          <option value="genprompt">An image-generation prompt (to recreate the image)</option>
+          <option value="alt">Alt text (short and long, for accessibility)</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1 1 100%">
+        <label for="focus">Focus on (optional)</label>
+        <input id="focus" type="text" placeholder="e.g. every button and its state, or the character's face and clothing">
+      </div>
+    </div>
+    <label class="remember"><input type="checkbox" id="remember"> Remember my keys on this computer</label>
+
+    <details class="adv" id="adv">
+      <summary id="advSum">More options</summary>
+      <div class="row">
+        <div class="field" style="flex:2 1 340px">
+          <label for="model">AI models, tried in order (comma separated)</label>
+          <div style="display:flex;gap:8px">
+            <input id="model" type="text" value="gemini-3.5-flash, gemini-3.5-flash-lite, gemini-3.8-flash, gemini-3.6-flash, gemini-flash-latest" autocomplete="off">
+            <button type="button" id="find" title="Ask Google which models your key can use">Find models</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint" id="found"></p>
+      <div class="row">
+        <div class="field">
+          <label for="mode">Image type</label>
+          <select id="mode">
+            <option value="general">Photo or illustration</option>
+            <option value="ui">Screenshot or app screen</option>
+            <option value="doc">Document, chart, table or diagram</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="detail">Detail level</label>
+          <select id="detail">
+            <option value="short">Short (about 250 words)</option>
+            <option value="standard">Standard (about 600 words)</option>
+            <option value="full" selected>Exhaustive</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1.2 1 200px">
+          <label for="tiles">Extra detail with tiles</label>
+          <select id="tiles">
+            <option value="0">Off</option>
+            <option value="2">2 x 2 tiles (4 extra requests per image)</option>
+            <option value="3">3 x 3 tiles (9 extra requests per image)</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1 1 140px">
+          <label for="lang">Write in</label>
+          <select id="lang">
+            <option>English</option><option>Hindi</option><option>Marathi</option><option>Urdu</option><option>Arabic</option>
+            <option>Spanish</option><option>French</option><option>German</option><option>Portuguese</option>
+            <option>Chinese</option><option>Japanese</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:.6 1 120px">
+          <label for="pdfPages">PDF pages to read</label>
+          <input id="pdfPages" type="number" min="1" max="30" value="10">
+        </div>
+        <div class="field" style="flex:.6 1 120px">
+          <label for="videoFrames">Video frames</label>
+          <input id="videoFrames" type="number" min="2" max="20" value="6">
+        </div>
+        <div class="field">
+          <label for="ocrlang">OCR text language</label>
+          <select id="ocrlang">
+            <option value="eng">English</option>
+            <option value="eng+hin">English + Hindi</option>
+            <option value="eng+mar">English + Marathi</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1 1 100%">
+          <label for="question">Ask a question instead (optional)</label>
+          <input id="question" type="text" placeholder="e.g. what error does this screen show?">
+        </div>
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" id="verify" checked> Self-check pass: a second look that fixes mistakes (uses about 2x requests)</label>
+        <label><input type="checkbox" id="ocr"> Also read the text with local OCR (exact characters, runs on your computer)</label>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <div class="field" style="flex:1 1 200px">
+          <label for="presetName">Save these settings as a preset</label>
+          <input id="presetName" type="text" placeholder="A name" autocomplete="off">
+        </div>
+        <button id="presetSave" type="button" class="small">Save preset</button>
+        <button id="presetDel" type="button" class="small" disabled>Delete preset</button>
+      </div>
+      <p class="hint">Your keys and images go straight from your browser to the AI services you use. Free tiers may use your inputs to improve their products, so don't send private images. Measured colors are taken from the pixels of your image and given to the AI as a reference. If a model fails (limit reached or not found), the next one is tried automatically.</p>
+      <p class="hint">Requests sent today from this browser: <span id="usage">none</span> <button id="usageReset" type="button" class="small">Reset</button></p>
+    </details>
+  </div>
+
+  <details class="panel" id="backup">
+    <summary>Backup AI services (used automatically if Google's limit is reached)</summary>
+    <div class="row">
+      <div class="field">
+        <label for="gkey">Groq API key (free at console.groq.com)</label>
+        <input id="gkey" type="password" autocomplete="off" placeholder="Optional">
+      </div>
+      <div class="field" style="flex:2 1 340px">
+        <label for="gmodel">Groq vision models, in order</label>
+        <div style="display:flex;gap:8px">
+          <input id="gmodel" type="text" value="qwen/qwen3.8-27b, meta-llama/llama-4-scout-17b-16e-instruct" autocomplete="off">
+          <button type="button" id="gfind">Find models</button>
+        </div>
+      </div>
+    </div>
+    <p class="hint" id="gfound"></p>
+    <div class="row">
+      <div class="field">
+        <label for="okey">OpenRouter API key (free at openrouter.ai)</label>
+        <input id="okey" type="password" autocomplete="off" placeholder="Optional">
+      </div>
+      <div class="field" style="flex:2 1 340px">
+        <label for="omodel">OpenRouter free vision models, in order</label>
+        <div style="display:flex;gap:8px">
+          <input id="omodel" type="text" value="" placeholder="Click Find free vision models" autocomplete="off">
+          <button type="button" id="ofind">Find free vision models</button>
+        </div>
+      </div>
+    </div>
+    <p class="hint" id="ofound"></p>
+    <p class="hint">Order of use: Gemini models first, then Groq, then OpenRouter. Backup models are usually less detailed than Gemini, and the images you send go to whichever provider answers. Groq's list does not say which models can read images, so the tool skips models that refuse them. Free limits and model names change often, so use the Find buttons.</p>
+  </details>
+
+  <p class="hint" id="pdfNote" role="status" aria-live="polite" style="margin:0 0 10px"></p>
+  <div id="list"></div>
+
+  <div class="actionbar" id="actionbar" hidden>
+    <div class="ab-main">
+      <button class="primary" id="run" disabled>Describe images</button>
+      <button id="stop" type="button" hidden>Stop</button>
+      <button id="clear" disabled>Clear all</button>
+      <progress id="prog" max="1" value="0" hidden aria-label="Progress through the images"></progress>
+    </div>
+    <p class="ab-est" id="estimate" role="status"></p>
+  </div>
+
+  <section class="panel" id="cmpSetup" hidden>
+    <strong>Compare two images</strong>
+    <p class="hint" style="margin-top:4px">Check how close a generated copy is to the original, and get a list of fixes.</p>
+    <div class="row" style="margin-top:10px">
+      <div class="field"><label for="cmpRef">Reference (the original)</label><select id="cmpRef"></select></div>
+      <div class="field"><label for="cmpCopyImg">Copy to check</label><select id="cmpCopyImg"></select></div>
+      <button id="compare" type="button" class="primary" disabled>Compare</button>
+    </div>
+  </section>
+
+  <section class="panel out" id="outPanel">
+    <div class="intro">
+      <label class="hint" style="margin:0"><input type="checkbox" id="useIntro" checked> Add an intro line for ChatGPT at the top</label>
+      <label class="hint" style="margin:6px 0 0;display:block"><input type="checkbox" id="mask"> Hide emails, phone numbers and file paths in the output below (your saved descriptions are not changed)</label>
+      <label class="hint" style="margin:6px 0 0;display:block"><input type="checkbox" id="wrapTags"> Wrap each image in &lt;image&gt; tags (helps some AIs tell several images apart)</label>
+      <textarea id="intro" aria-label="Intro line" style="min-height:64px;margin-top:6px"></textarea>
+      <p class="hint">Edit it freely. It tells the AI to treat the text as the image. Leave it untouched and it adjusts automatically for one or several images.</p>
+    </div>
+    <div class="bar">
+      <strong>Combined description</strong>
+      <button id="copy" class="primary" disabled>Copy</button>
+      <button id="save" disabled>Download .txt</button>
+      <button id="saveMd" disabled>.md</button>
+      <button id="saveJson" disabled>.json</button>
+      <button id="saveReport" disabled>Report (.html)</button>
+      <button id="saveZip" disabled>.zip</button>
+      <label class="hint" style="margin:0"><input type="checkbox" id="zipImages" checked> with images</label>
+      <span class="stats" id="stats">0 characters</span>
+    </div>
+    <div class="meterrow">
+      <meter id="tokMeter" min="0" max="16000" low="6000" high="12000" optimum="500" value="0" aria-label="Length of the text for one chat message"></meter>
+      <span id="tokNote" class="hint" style="margin:0"></span>
+      <button id="splitNow" type="button" class="small" hidden>Split it now</button>
+    </div>
+    <textarea id="combined" class="big" placeholder="Descriptions appear here, one section per image."></textarea>
+
+    <div class="bar" style="margin-top:14px">
+      <label for="splitMax" class="hint" style="margin:0">If it is too long to paste in one message, split it into parts of up to</label>
+      <select id="splitMax" style="width:auto">
+        <option value="4000">4,000 characters</option>
+        <option value="8000">8,000 characters</option>
+        <option value="12000" selected>12,000 characters</option>
+        <option value="20000">20,000 characters</option>
+      </select>
+      <button id="split" disabled>Split into parts</button>
+    </div>
+    <div id="parts"></div>
+  </section>
+
+  <section class="panel" id="cmpPanel" hidden>
+    <div class="bar">
+      <strong>Comparison and fix prompt</strong>
+      <button id="cmpCopy">Copy</button>
+    </div>
+    <p class="hint" style="margin-top:0">Use the FIX LIST to correct the generated image, and the GENERATION PROMPT to regenerate it.</p>
+    <textarea id="cmpOut" class="big" aria-label="Comparison result"></textarea>
+  </section>
+
+  <details class="panel" id="histPanel">
+    <summary id="histSum">History</summary>
+    <p class="hint" style="margin-top:0">Saved only in this browser. Describing the same image again with the same settings reuses the saved text and uses no quota.</p>
+    <div id="histList"></div>
+    <div class="bar" style="margin-top:10px"><button id="histClear" class="small">Delete all history</button></div>
+  </details>
+  </div>
+  <div class="view" id="view-inspect" hidden>
+  <div class="viewhead"><h1 class="viewh" tabindex="-1">Check an image for AI signals</h1><span class="badge local">Stays on your device</span></div>
+  <section class="panel" id="toolInspect">
+      <p class="hint" style="margin-top:0">Reads what is written inside the file: Content Credentials (C2PA), the "digital source type" label, the software or AI tool named, image-generator settings, camera data and location. It names the AI only when the file itself says so. You can also drop images anywhere on this page.</p>
+      <div class="bar"><button id="inspectPick" type="button" class="primary">Choose images to check</button><input id="inspectFile" type="file" accept="image/*" multiple hidden>
+        <button id="inspectJson" type="button" class="small" hidden>Download all (.json)</button><button id="inspectClear" type="button" class="small" hidden>Clear results</button></div>
+      <div id="inspectOut" aria-live="polite"></div>
+    </section>
+  </div>
+  <div class="view" id="view-shrink" hidden>
+  <div class="viewhead"><h1 class="viewh" tabindex="-1">Shrink and convert images</h1><span class="badge local">Stays on your device</span></div>
+  <section class="panel" id="toolShrink">
+      <p class="hint" style="margin-top:0">Makes images smaller so they fit an upload limit. Re-saving a picture does not keep the original's embedded information, such as camera data, location and Content Credentials. If you need those, keep the original. You can also drop images anywhere on this page.</p>
+      <div class="row">
+        <div class="field" style="flex:0 1 190px"><label for="shrinkMax">Longest side</label>
+          <select id="shrinkMax"><option value="0">Keep the original size</option><option value="3840">3840 px</option><option value="2560">2560 px</option><option value="1920">1920 px</option><option value="1600" selected>1600 px</option><option value="1280">1280 px</option><option value="1024">1024 px</option><option value="800">800 px</option></select></div>
+        <div class="field" style="flex:0 1 150px"><label for="shrinkFmt">Format</label>
+          <select id="shrinkFmt"><option value="jpeg">JPEG</option><option value="webp">WebP</option><option value="png">PNG</option></select></div>
+        <div class="field" style="flex:0 1 170px"><label for="shrinkQ">Quality: <span id="shrinkQv">82</span></label>
+          <input id="shrinkQ" type="range" min="40" max="95" value="82"></div>
+        <div class="field" style="flex:0 1 170px"><label for="shrinkTarget">Target size in KB (optional)</label>
+          <input id="shrinkTarget" type="number" min="20" max="20000" placeholder="e.g. 500"></div>
+      </div>
+      <div class="bar" style="margin-top:14px"><button id="shrinkPick" type="button" class="primary">Choose images and shrink</button><input id="shrinkFile" type="file" accept="image/*" multiple hidden>
+        <button id="shrinkZip" type="button" class="small" hidden>Download all (.zip)</button><button id="shrinkSend" type="button" class="small" hidden>Describe these</button></div>
+      <div id="shrinkOut" aria-live="polite"></div>
+    </section>
+  </div>
+  <div class="view" id="view-pdf" hidden>
+  <div class="viewhead"><h1 class="viewh" tabindex="-1">Combine images into one PDF</h1><span class="badge local">Stays on your device</span></div>
+  <section class="panel" id="toolPdf">
+      <p class="hint" style="margin-top:0">One PDF counts as one upload. It uses the images already in the Describe tab, in their current order, so reorder them there first with the arrows. Images you drop on this page are added to that list.</p>
+      <div class="row">
+        <div class="field" style="flex:0 1 230px"><label for="pdfSize">Page size</label>
+          <select id="pdfSize"><option value="image">Same shape as each image</option><option value="a4">A4</option><option value="letter">US Letter</option></select></div>
+        <button id="pdfMake" type="button" class="primary">Make the PDF</button>
+      </div>
+      <p class="hint" id="pdfMsg" role="status"></p>
+    </section>
+  </div>
+  <details class="panel" id="privacyPanel">
+    <summary>Privacy and saved data</summary>
+    <ul class="plain">
+      <li>The extra tools (AI-signal check, shrink, PDF) run on your computer, and the files you give them are not uploaded.</li>
+      <li>This page is a set of static files. There is no server of its own, so the people who host it never see your images, text or keys.</li>
+      <li>Your images and requests go straight from your browser to the AI service you choose: Google Gemini, and Groq or OpenRouter if you add them. Their terms apply, and free tiers may use inputs to improve their products.</li>
+      <li>Other sites are contacted only when needed: Google Fonts for the typeface, and jsDelivr for the OCR, PDF reading and diagram preview libraries.</li>
+      <li>Saved in this browser only: your keys if you tick "Remember my keys" (stored as plain text, so only use that on a computer you trust), your history of descriptions with tiny thumbnails (up to 40), presets, your last-used settings, today's request counts, and theme choices.</li>
+    </ul>
+    <div class="bar" style="margin:12px 0 0"><button id="wipe" type="button" class="small">Delete everything saved in this browser</button></div>
+  </details>
+</main>
+
+<div id="toast" role="status" aria-live="polite" hidden><span id="toastMsg"></span><button id="toastAct" type="button" class="small" hidden></button></div>
+<div id="sr" class="sr-only" role="status" aria-live="polite"></div>
+
+<dialog id="zoom" aria-label="Describe a region">
+  <strong>Describe a region</strong>
+  <p class="hint" style="margin-top:4px">Drag on the image to choose the area. The tool sends just that crop and adds a close-up description to this image.</p>
+  <div class="zwrap" id="zwrap"><img id="zimg" alt="Image to select a region from"><div class="sel" id="sel"></div></div>
+  <div class="bar" style="justify-content:flex-end;margin:0">
+    <span class="hint" id="zinfo" style="margin:0 auto 0 0"></span>
+    <button id="zcancel" type="button">Cancel</button>
+    <button id="zgo" type="button" class="primary" disabled>Describe region</button>
+  </div>
+</dialog>
+
+<dialog id="diff" aria-labelledby="diffTitle">
+  <div class="bar" style="justify-content:space-between">
+    <strong id="diffTitle">What the self-check changed</strong>
+    <button id="diffClose" type="button" class="small">Close</button>
+  </div>
+  <div id="diffBody"></div>
+</dialog>
+
+<dialog id="acc" aria-label="Accuracy test">
+  <div class="bar" style="justify-content:space-between">
+    <strong id="accTitle">Accuracy test</strong>
+    <button id="accClose" type="button" class="small">Close</button>
+  </div>
+  <div id="accBody"></div>
+  <div class="bar" style="margin:12px 0 0">
+    <button id="accFix" type="button" class="primary small" hidden>Add the missing details to the description</button>
+  </div>
+</dialog>
+
+<dialog id="prev" aria-label="Preview">
+  <div class="bar" style="justify-content:space-between">
+    <strong id="prevTitle">Preview</strong>
+    <button id="prevClose" type="button" class="small">Close</button>
+  </div>
+  <div id="prevBody"></div>
+</dialog>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const items = []; let nextId = 1, busy = false;
+  const drop = $('drop'), fileInput = $('file'), list = $('list'), runBtn = $('run'), clearBtn = $('clear'), combined = $('combined'), cmpBtn = $('compare');
+  const nameOf = it => it.name || (it.file && it.file.name) || 'pasted image';
+  const csv = id => $(id).value.split(',').map(x => x.trim()).filter(Boolean);
+
+  // remembered keys
+  try {
+    [['gk','key'],['grk','gkey'],['ork','okey']].forEach(([k, id]) => { const v = localStorage.getItem(k); if (v) { $(id).value = v; $('remember').checked = true; if (id !== 'key') $('backup').open = true; } });
+  } catch {}
+
+  /* ---------- prompts ---------- */
+  const PROMPTS = {
+    general: `Describe this image so precisely that another AI that cannot see it could reproduce it. Use only what is visible. If you are unsure of a detail, write "unclear" instead of guessing. Work through these sections:
+1. OVERVIEW: subject and type of image, style (photo, cel-shaded illustration, 3D render, painting), and whether there is any border, logo or watermark.
+2. BACKGROUND: what the background is made of (for example clouds, sky, space, wall, plain color), its main colors, and where the brightest and darkest areas are. Describe every background element you can clearly see, including scenery, weather, light beams and lens flares. Do not add anything you cannot see. If the background is plain, a gradient or unclear, say so.
+3. MAIN SUBJECT: how much of the frame height it fills (as a percentage), where it sits horizontally and vertically, its pose, the direction it faces, head angle, expression, and body build (slim, average or bulky).
+4. SUBJECT DETAILS: hair (shape, length, direction it is blown or swept), face, clothing, armor, gloves, shoes, each with its colors.
+5. EFFECTS: auras, glows, lightning, particles, streaks. For each: shape, edge sharpness (soft or hard), color, approximate count, and where it is.
+6. COLORS: name the color of each major area in plain words, and give an approximate hex code only where one of the measured palette colors clearly fits that area. Say "approximate" for any hex you estimate yourself.
+7. TEXT: transcribe any visible text exactly, or state that there is none.
+8. UNCERTAIN: anything blurry, cropped, hidden or unclear.`,
+    ui: `Describe this screenshot so precisely that another AI that cannot see it could rebuild it. Use only what is visible. Ignore the browser window frame (tabs, address bar, bookmarks, extension icons, taskbar) and describe only the app or page content inside it, unless the user's focus asks about the frame. If you are unsure of a detail, write "unclear" instead of guessing.
+1. OVERVIEW: app or site (if identifiable), device type, light or dark theme, aspect ratio.
+2. LAYOUT TREE: list the screen regions top to bottom and left to right (header, sidebar, main area, footer, modals), nested, with approximate position and size as percentages.
+3. ELEMENTS: every button, input, tab, icon, menu item, link, checkbox, toggle, image and card, with its exact label text, state (active, disabled, selected), and position.
+4. TEXT: transcribe all visible text verbatim in reading order, including error messages, code, numbers and timestamps. Put code and tables in code blocks or markdown tables.
+5. COLORS AND STYLE: name the background, text, accent and border colors, giving approximate hex codes where the measured palette clearly fits, plus fonts, corner rounding and spacing.
+6. UNCERTAIN: anything cut off, blurry or ambiguous.`,
+    doc: `Describe this document, chart, table or diagram so precisely that another AI that cannot see it could recreate it. Use only what is visible. If you are unsure of a detail, write "unclear" instead of guessing.
+1. OVERVIEW: type of content, title, purpose, orientation.
+2. STRUCTURE: how the page or figure is organized, with the position of each block as percentages.
+3. CONTENT: transcribe all text verbatim in reading order. Reproduce every table as a markdown table with all cells. For charts, give the chart type, axis titles, units, scales, tick labels, legend, and every data point or bar value you can read (mark estimates). For diagrams, list every node with its label and shape, and every connection with direction and label.
+4. STYLE: colors (approximate hex where the measured palette fits), fonts, line styles, highlights, annotations, stamps, handwriting.
+5. UNCERTAIN: anything unreadable or ambiguous.`
+  };
+  const LENGTH = {
+    short: 'Length: keep the whole description under about 250 words. Include only the most important elements, key text and main colors.',
+    standard: 'Length: aim for roughly 600 words. Cover every important element but skip trivial detail.',
+    full: 'Length: be exhaustive. Include every element and detail you can see, however small.'
+  };
+
+  const F3 = '```';
+  const KIND_PROMPTS = {
+    alt: `Write alt text for this image for people who cannot see it. Output exactly two lines and nothing else:
+Short: one sentence under 125 characters that says what matters most, without starting with "Image of" or "Picture of".
+Long: 2 to 4 sentences describing the subject, setting, layout and any visible text word for word, and what the image is meant to show. If it is a chart, include the main trend with the key numbers.
+Describe only what is visible.`,
+    genprompt: `Write ONE prompt for an AI image generator that would recreate this image as closely as possible. Rules:
+- Under 220 words, as a single plain-text paragraph, with no introduction and no quotation marks.
+- Start with the medium or style and the aspect ratio, then the main subject, pose, framing and composition (give sizes as percentages of the frame), background, lighting, effects, and the color palette with hex codes from the measured palette.
+- Describe only what is visible. Do not name copyrighted characters or artists; describe their look instead.
+- Finish with a sentence starting "Avoid:" that lists what must not appear, such as watermarks, logos, extra text, extra limbs or blur.`,
+    code: `Recreate this screenshot as ONE self-contained HTML document with embedded CSS. Rules:
+- No external files, fonts, libraries or images. Use system fonts. Draw icons with inline SVG or simple CSS shapes, and show photos or avatars as plain colored placeholders of the same size.
+- Match the layout and proportions of every region (use flexbox or grid), spacing, border radius, shadows, font sizes and weights, and the colors (use the measured palette hex values where they fit).
+- Reproduce every visible word exactly. Keep visible states such as the selected tab, active button and disabled items.
+- Ignore the browser window frame (tabs, address bar, taskbar) and rebuild only the app or page inside it.
+- Use JavaScript only if something visible needs it, and keep it minimal.
+Output exactly one ${F3}html code block and nothing before it. After the block add one line starting with "Notes:" listing anything you could not reproduce.`,
+    mermaid: `Convert this diagram into a valid Mermaid diagram. Rules:
+- Pick the right type (flowchart TD or LR, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, or another that fits).
+- Keep every node label and every connection with its direction and its label exactly as shown. Do not add or remove nodes.
+- Use short ids (A, B, C) with the label in brackets, and put labels that contain special characters in double quotes.
+- For cloud or network diagrams, use subgraphs for groupings such as regions, VPCs, subnets and availability zones.
+- If part of the image is unclear, add a line starting with %% uncertain: inside the code.
+Output exactly one ${F3}mermaid code block and nothing else.`,
+    csv: `Extract the data from this chart or table into CSV. Rules:
+- The first row is the headers. Put units in the header (for example "Revenue (USD)"), not in the cells.
+- Write numbers plainly, without thousands separators or currency symbols.
+- Quote any field that contains a comma, a quote or a line break.
+- For tables, keep every row and column in the original order, and leave merged or empty cells blank.
+- For charts, use one row per category or x value and one column per series. Values read from a chart by eye are estimates.
+Output exactly one ${F3}csv code block. After it add one line starting with "Notes:" saying which values are estimated or unclear, or "Notes: none".`
+  };
+
+  function buildPrompt(img) {
+    const dims = img.w ? `The image is exactly ${img.w} x ${img.h} pixels, so use that for the aspect ratio. ` : '';
+    const colors = img.colors && img.colors.length ? `Measured dominant colors from the pixels, by share of the image (a reference list of the main colors, not a map of its parts): ${img.colors.join('; ')}. ` : '';
+    const focus = $('focus').value.trim(), q = $('question').value.trim();
+    const focusLine = focus ? `\nPay special attention to: ${focus}. Describe those parts in extra detail.` : '';
+    if (q) {
+      return `${dims}${colors}Look at the image and answer this question: "${q}"\nGive the direct answer first, then the specific evidence from the image, quoting any text exactly. If the image does not show the answer, say so instead of guessing. Keep it concise.${focusLine}${langLine()}`;
+    }
+    const k = $('out').value;
+    if (k !== 'describe') return `${dims}${colors}${KIND_PROMPTS[k]}${focus ? `\nPay special attention to: ${focus}.` : ''}${k === 'alt' ? langLine() : ''}`;
+    return `${dims}${colors}${PROMPTS[$('mode').value]}\n${LENGTH[$('detail').value]}${focusLine}${langLine()}`;
+  }
+
+  function verifyPrompt(img, desc) {
+    return `You are checking a written description against the image itself. Look at the image carefully again.
+Image size: ${img.w} x ${img.h} pixels. Measured palette (reference): ${(img.colors || []).join('; ')}.
+Description to check (between the tags):
+<description>
+${desc}
+</description>
+Task:
+1. Find every statement that is wrong, exaggerated, invented, or missing. Remove only details that are not actually visible. Keep everything that is visible, and add any visible element the description missed (small emblems, logos, light effects, fur, trim, accessories). Check especially: background type, figure size as share of frame height, body build, pose and facing direction, head angle, hair direction, aura shape and softness, number and color of effects, colors, and any text or logos.
+2. Write the corrected full description with the same numbered sections, containing only facts you can see, in the same language as the description. Use "unclear" for anything you cannot verify.
+Output exactly in this format:
+ERRORS FOUND:
+- (one line per error, or "none")
+CORRECTED DESCRIPTION:
+(the full corrected description, with no quotes, tags, preamble or closing remarks)`;
+  }
+
+  function comparePrompt(A, B) {
+    return `Image 1 is the REFERENCE, the look to match. Image 2 is a GENERATED copy that should match it. Look at both carefully.
+Measured palette of image 1: ${(A.colors || []).join('; ')}.
+Measured palette of image 2: ${(B.colors || []).join('; ')}.
+Output in this order:
+1. COMPARISON TABLE with columns: Element | Reference (image 1) | Generated (image 2) | Match (yes / partly / no). Cover: background type, aura shape and softness, figure size as share of frame height, pose and facing direction, head angle, hair shape and direction, face and expression, outfit and armor, gloves and boots, effects (count, color, thickness), overall colors, extra elements (logos, watermarks, text).
+2. SCORE: number of "yes" rows out of total rows, as a percentage.
+3. FIX LIST: for each "partly" or "no" row, one specific change to make to image 2.
+4. GENERATION PROMPT: one prompt under 250 words that describes image 1 precisely so an image generator could reproduce it. Use only facts visible in image 1.`;
+  }
+
+  /* ---------- adding images ---------- */
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value=''; });
+  // Drop files anywhere on the page.
+  const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+  window.addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); $('dropOverlay').textContent = DROP_TEXT[currentView] || DROP_TEXT.describe; document.body.classList.add('dragging'); } });
+  window.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
+  window.addEventListener('drop', e => { if (hasFiles(e)) { e.preventDefault(); document.body.classList.remove('dragging'); routeFiles(e.dataTransfer.files); } });
+  window.addEventListener('paste', e => {
+    const f = [...(e.clipboardData?.files||[])].filter(x => x.type.startsWith('image/'));
+    if (f.length) routeFiles(f);
+  });
+
+  const fileKey = f => `${f.webkitRelativePath || f.name}|${f.size}|${f.lastModified}`;
+  const isPdf = f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+  const pdfNote = $('pdfNote');
+
+  function reveal() {
+    const el = $('list');
+    if (items.length && el.getBoundingClientRect().top > innerHeight * 0.75) {
+      el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    }
+  }
+
+  function addFiles(fl, stay) {
+    const files = [...fl];
+    files.filter(f => f.type.startsWith('image/')).forEach(f =>
+      items.push({ id: nextId++, file: f, name: f.webkitRelativePath || undefined, key: fileKey(f), url: URL.createObjectURL(f), thumb: '', text: '', review: '', status: 'Ready', err: false }));
+    const pdfs = files.filter(isPdf), vids = files.filter(f => f.type.startsWith('video/'));
+    render(); reveal();
+    if (!stay && currentView !== 'describe' && (files.length)) showView('describe', false, 'push');
+    if (pdfs.length || vids.length) (async () => { for (const f of pdfs) await addPdf(f); for (const f of vids) await addVideo(f); reveal(); })();
+  }
+
+  /* ---------- PDF pages ---------- */
+  const PDFJS = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/';
+  function loadScript(src) {
+    return new Promise((res, rej) => {
+      const t = document.createElement('script'); t.src = src; t.onload = res;
+      t.onerror = () => rej(new Error('Could not load ' + src.split('/').slice(-1)[0])); document.head.appendChild(t);
+    });
+  }
+  let pdfP;
+  function loadPdfJs() {
+    if (!pdfP) {
+      pdfP = (async () => {
+        await loadScript(PDFJS + 'pdf.min.js');
+        const r = await fetch(PDFJS + 'pdf.worker.min.js');
+        if (!r.ok) throw new Error('the PDF reader could not load');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(await r.blob());
+      })();
+      pdfP.catch(() => { pdfP = null; });
+    }
+    return pdfP;
+  }
+  async function addPdf(file) {
+    const limit = Math.max(1, Math.min(30, parseInt($('pdfPages').value, 10) || 10));
+    pdfNote.textContent = `Reading ${file.name}...`;
+    try {
+      await loadPdfJs();
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      const n = Math.min(doc.numPages, limit), base = file.name.replace(/\.pdf$/i, '');
+      for (let p = 1; p <= n; p++) {
+        pdfNote.textContent = `Reading ${file.name}: page ${p} of ${n}...`;
+        const page = await doc.getPage(p);
+        const v1 = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: Math.min(3, 1800 / Math.max(v1.width, v1.height)) });
+        const c = document.createElement('canvas'); c.width = Math.round(viewport.width); c.height = Math.round(viewport.height);
+        await page.render({ canvasContext: c.getContext('2d'), viewport }).promise;
+        const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+        let txt = '';
+        try { (await page.getTextContent()).items.forEach(i => { txt += i.str + (i.hasEOL ? '\n' : ' '); }); } catch {}
+        txt = txt.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+        const pf = new File([blob], `${base}-page-${p}.jpg`, { type: 'image/jpeg', lastModified: file.lastModified });
+        items.push({ id: nextId++, file: pf, key: `${fileKey(file)}|p${p}`, url: URL.createObjectURL(pf), thumb: '', text: '', review: '', extraText: txt, status: 'Ready', err: false });
+        page.cleanup(); render();
+      }
+      pdfNote.textContent = doc.numPages > n ? `Read the first ${n} of ${doc.numPages} pages. Raise "PDF pages to read" in Settings to read more.` : '';
+    } catch (e) {
+      pdfNote.textContent = `Could not read ${file.name}: ${(e && e.message) || 'unknown error'}`;
+    }
+  }
+
+  function render() {
+    list.innerHTML = items.length ? '' : '<p class="empty">No images yet. Use Add images above, or paste one with Ctrl+V.</p>';
+    items.forEach((it, i) => {
+      const el = document.createElement('div'); el.className = 'item';
+      el.innerHTML = `<button type="button" class="thumb" aria-label="View a larger preview"><img alt=""></button><div><header><span class="name"></span><span class="acts"><span class="status"></span><button class="small mv up" type="button" aria-label="Move image up" title="Move up">↑</button><button class="small mv dn" type="button" aria-label="Move image down" title="Move down">↓</button><button class="small grip" type="button" aria-label="Drag to reorder" title="Drag to reorder">⠿</button><button class="small zoom" type="button">Zoom on a region</button><button class="small rm" type="button" aria-label="Remove image">Remove</button></span></header><textarea aria-label="Description"></textarea></div>`;
+      el.querySelector('img').src = it.url;
+      el.querySelector('.thumb').addEventListener('click', () => previewImage(it));
+      el.querySelector('.name').textContent = `Image ${i+1}: ${nameOf(it)}`;
+      const st = el.querySelector('.status'); st.textContent = it.status; if (it.err) st.classList.add('err');
+      const t = el.querySelector('textarea'); t.value = it.text;
+      if (it.text.length > 320 && !it.open) t.classList.add('collapsed');
+      t.addEventListener('input', () => { it.text = t.value; build(); });
+      t.addEventListener('change', () => saveHist(it));
+      const z = el.querySelector('.zoom'); z.disabled = busy || !it.file;
+      if (!it.file) z.title = 'Not available for items loaded from history';
+      z.addEventListener('click', () => openZoom(it));
+      const mk = t => { const b = document.createElement('button'); b.type = 'button'; b.className = 'small'; b.textContent = t; return b; };
+      const acts = el.querySelector('.acts');
+      if (it.err) {
+        const b = mk('Retry'); b.disabled = busy;
+        b.addEventListener('click', () => { it.err = false; it.status = 'Ready'; processItems([it]); });
+        acts.insertBefore(b, z);
+        if (it.errCode === 429) { const b2 = mk('Add a backup service'); b2.addEventListener('click', () => openSection('backup')); acts.insertBefore(b2, z); }
+        if (it.errCode === 401 || it.errCode === 403) { const b2 = mk('Check my key'); b2.addEventListener('click', () => { $('key').scrollIntoView({ block: 'center' }); $('key').focus(); }); acts.insertBefore(b2, z); }
+      }
+      if (it.text.length > 320) {
+        const b = mk(it.open ? 'Collapse' : 'Expand');
+        b.addEventListener('click', () => { it.open = !it.open; render(); });
+        acts.insertBefore(b, z);
+      }
+      if (it.original && it.checked) {
+        const b = mk('See what changed'); b.addEventListener('click', () => showDiff(it)); acts.insertBefore(b, z);
+      }
+      if (it.file) {
+        const b = mk('Check AI signals'); b.addEventListener('click', () => { runInspect([it.file]); showView('inspect', true, 'push'); }); acts.insertBefore(b, z);
+      }
+      if (it.kind === 'describe' && it.file && it.text.trim()) {
+        const b = mk('Test accuracy'); b.disabled = busy;
+        b.addEventListener('click', () => accuracyTest(it));
+        acts.insertBefore(b, z);
+      }
+      if (['code', 'mermaid', 'csv', 'genprompt', 'alt'].includes(it.kind) && it.text.trim()) {
+        const list = [['Copy', b => copyItem(it, b)]];
+        if (['code', 'mermaid', 'csv'].includes(it.kind)) list.unshift(['Preview', () => previewItem(it)], ['Download', () => downloadItem(it)]);
+        list.forEach(([txt, fn]) => { const b = mk(txt); b.addEventListener('click', () => fn(b)); acts.insertBefore(b, z); });
+      }
+      const rm = el.querySelector('.rm'); rm.disabled = busy;
+      rm.addEventListener('click', () => { if (it.file) URL.revokeObjectURL(it.url); items.splice(items.indexOf(it),1); render(); });
+      const up = el.querySelector('.up'), dn = el.querySelector('.dn'), grip = el.querySelector('.grip');
+      up.disabled = busy || i === 0; dn.disabled = busy || i === items.length - 1; grip.disabled = busy;
+      up.addEventListener('click', () => moveItem(it, -1)); dn.addEventListener('click', () => moveItem(it, 1));
+      grip.addEventListener('mousedown', () => { el.draggable = true; });
+      el.addEventListener('dragstart', e => {
+        if (!el.draggable) { e.preventDefault(); return; }
+        dragId = it.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(it.id)); el.classList.add('dragging-item');
+      });
+      el.addEventListener('dragend', () => { el.draggable = false; dragId = null; document.querySelectorAll('.item').forEach(x => x.classList.remove('drop-target', 'dragging-item')); });
+      el.addEventListener('dragover', e => { if (dragId == null || dragId === it.id) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('drop-target'); });
+      el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
+      el.addEventListener('drop', e => {
+        if (dragId == null) return; e.preventDefault();
+        const from = items.findIndex(x => x.id === dragId), to = items.indexOf(it);
+        dragId = null; if (from < 0 || from === to) return;
+        items.splice(to, 0, items.splice(from, 1)[0]); render();
+      });
+      if (it.review) {
+        const d = document.createElement('details'); d.className = 'review';
+        d.innerHTML = '<summary>Corrections made by the self-check</summary>';
+        const p = document.createElement('pre'); p.textContent = it.review; d.appendChild(p);
+        el.lastElementChild.appendChild(d);
+      }
+      list.appendChild(el);
+    });
+    const can = !busy && items.length > 0;
+    runBtn.disabled = !can; clearBtn.disabled = !can;
+    renderCompare();
+    $('actionbar').hidden = !items.length;
+    document.body.classList.toggle('working', items.length > 0 || window.scrollY > innerHeight * 0.35);
+    build(); estimate();
+  }
+
+  /* ---------- combined output + intro + split ---------- */
+  const INTROS = {
+    genprompt: ['', ''],
+    alt: ['', ''],
+    describe: ["The following is a detailed text description of an image I can't attach. Treat it as the image and answer questions about it, and tell me if something you need isn't covered.",
+               "The following are detailed text descriptions of images I can't attach. Treat each one as its image and answer questions about them, and tell me if something you need isn't covered."],
+    code: ["The following is HTML and CSS that recreates a screenshot I can't attach. Treat it as the screenshot: answer questions about the design, or help me change the code, and tell me if something you need isn't covered.",
+           "The following is HTML and CSS that recreates screenshots I can't attach. Treat each one as its screenshot: answer questions about the designs, or help me change the code, and tell me if something you need isn't covered."],
+    mermaid: ["The following is a Mermaid diagram that recreates an image I can't attach. Treat it as the diagram: answer questions about it, or help me edit it, and tell me if something you need isn't covered.",
+              "The following are Mermaid diagrams that recreate images I can't attach. Treat each one as its diagram: answer questions about them, or help me edit them, and tell me if something you need isn't covered."],
+    csv: ["The following is the data from a chart or table image I can't attach, as CSV. Treat it as that table or chart: analyze it, answer questions about it, and tell me if a value looks unreliable.",
+          "The following is the data from chart or table images I can't attach, as CSV. Treat each one as its table or chart: analyze them, answer questions about them, and tell me if a value looks unreliable."]
+  };
+  const introBox = $('intro'), useIntro = $('useIntro');
+  let introEdited = false;
+  introBox.addEventListener('input', () => { introEdited = true; build(); });
+  useIntro.addEventListener('change', build);
+  $('mask').addEventListener('change', build);
+  $('wrapTags').addEventListener('change', build);
+  function maskText(t) {
+    return t
+      .replace(/(?:file:\/\/\/)?[A-Za-z]:[\\/][^\s`'")\]]+/g, '[file path]')
+      .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)*/g, '[email]')
+      .replace(/(?<![\w#])\+?\d[\d\s().-]{7,}\d(?![\w%])/g, '[phone]');
+  }
+  const kindOf = it => (it.kind && INTROS[it.kind]) ? it.kind : 'describe';
+
+  function build() {
+    const done = items.filter(i => i.text.trim());
+    const wrap = $('wrapTags').checked;
+    const esc = v => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    let body = done.map(it => {
+      const n = items.indexOf(it) + 1, t = it.text.trim();
+      return wrap ? `<image index="${n}" name="${esc(nameOf(it))}">\n${t}\n</image>` : `[Image ${n}: ${nameOf(it)}]\n${t}`;
+    }).join(wrap ? '\n\n' : '\n\n---\n\n');
+    if ($('mask').checked) body = maskText(body);
+    const kinds = [...new Set(done.map(kindOf))];
+    const k = kinds.length === 1 ? kinds[0] : 'describe';
+    if (!introEdited) introBox.value = INTROS[k][done.length > 1 ? 1 : 0];
+    const intro = introBox.value.trim();
+    combined.value = body && useIntro.checked && intro ? intro + '\n\n' + body : body;
+    introBox.disabled = !useIntro.checked;
+    const c = combined.value.length;
+    $('stats').textContent = `${c.toLocaleString()} characters, about ${Math.ceil(c/4).toLocaleString()} tokens`;
+    const tok = Math.ceil(c / 4);
+    $('tokMeter').value = Math.min(tok, 16000);
+    $('stats').className = 'stats' + (tok > 12000 ? ' bad' : tok > 6000 ? ' warn' : '');
+    $('tokNote').textContent = !c ? '' : tok > 12000 ? 'Too long for one message. Split it into parts.' : tok > 6000 ? 'Getting long. Some chats may cut it off, so splitting is safer.' : 'Fits comfortably in one message.';
+    $('splitNow').hidden = tok <= 6000;
+    $('copy').disabled = $('save').disabled = $('split').disabled = $('saveMd').disabled = $('saveJson').disabled = $('saveReport').disabled = $('saveZip').disabled = !c;
+    $('parts').innerHTML = '';
+  }
+  build();
+
+  function chunkText(text, limit) {
+    const out = []; let cur = '';
+    const push = s => { if (s) out.push(s); };
+    const pieces = [];
+    text.split('\n\n').forEach(par => {
+      if (par.length <= limit) { pieces.push(par); return; }
+      par.split('\n').forEach(line => {
+        for (let i = 0; i < line.length; i += limit) pieces.push(line.slice(i, i + limit));
+      });
+    });
+    pieces.forEach(p => {
+      if (cur && (cur.length + 2 + p.length) > limit) { push(cur); cur = p; }
+      else cur = cur ? cur + '\n\n' + p : p;
+    });
+    push(cur);
+    return out;
+  }
+
+  $('split').addEventListener('click', () => {
+    const max = +$('splitMax').value, box = $('parts'); box.innerHTML = '';
+    const text = combined.value;
+    if (text.length <= max) { box.innerHTML = '<p class="hint">It already fits in one message. Use Copy above.</p>'; return; }
+    const chunks = chunkText(text, max - 300), n = chunks.length;
+    chunks.forEach((c, i) => {
+      const head = i === 0 ? `[Part 1 of ${n}] I will send this text in ${n} parts. Do not answer until you have the last part. For now, reply only with "OK".\n\n`
+        : i < n - 1 ? `[Part ${i+1} of ${n}] Continuing. Reply only with "OK".\n\n`
+        : `[Part ${n} of ${n}] This is the last part. You now have the complete text, so treat it as the image(s) and wait for my questions.\n\n`;
+      const full = head + c;
+      const row = document.createElement('div'); row.className = 'part';
+      row.innerHTML = `<div class="top"><strong>Part ${i+1} of ${n}</strong><span class="hint" style="margin:0">${full.length.toLocaleString()} characters</span><button class="small" type="button">Copy</button></div><details><summary class="hint" style="margin:4px 0 0;cursor:pointer">Preview</summary><pre></pre></details>`;
+      row.querySelector('pre').textContent = full;
+      const b = row.querySelector('button');
+      b.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(full); } catch { const ta = document.createElement('textarea'); ta.value = full; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+        b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy', 1500);
+      });
+      box.appendChild(row);
+    });
+  });
+
+  /* ---------- image preparation: pixels, size, measured colors ---------- */
+  const toB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(blob); });
+
+  function sampleColors(src) {
+    try {
+      const s = Math.min(1, 160 / Math.max(src.width, src.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(src.width * s)); c.height = Math.max(1, Math.round(src.height * s));
+      const x = c.getContext('2d', { willReadFrequently: true });
+      x.drawImage(src, 0, 0, c.width, c.height);
+      const d = x.getImageData(0, 0, c.width, c.height).data;
+      const bins = new Map(); let total = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i+3] < 128) continue;
+        const k = ((d[i] >> 4) << 8) | ((d[i+1] >> 4) << 4) | (d[i+2] >> 4);
+        bins.set(k, (bins.get(k) || 0) + 1); total++;
+      }
+      if (!total) return [];
+      return [...bins.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => {
+        const r = ((k >> 8) & 15) * 16 + 8, g = ((k >> 4) & 15) * 16 + 8, b = (k & 15) * 16 + 8;
+        const hex = '#' + [r, g, b].map(z => z.toString(16).padStart(2, '0')).join('').toUpperCase();
+        return `${hex} (${Math.round(v / total * 100)}%)`;
+      });
+    } catch { return []; }
+  }
+
+  // Smaller JPEG copy for providers that limit request size (Groq, OpenRouter).
+  async function smallFrom(src, maxSide) {
+    const s = Math.min(1, maxSide / Math.max(src.width, src.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(src.width * s)); c.height = Math.max(1, Math.round(src.height * s));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
+    return { data: await toB64(blob), mime: 'image/jpeg' };
+  }
+  function thumbFrom(src) {
+    try {
+      const s = 64 / Math.max(src.width, src.height);
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(src.width * s)); c.height = Math.max(1, Math.round(src.height * s));
+      c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.7);
+    } catch { return ''; }
+  }
+
+  async function prepare(file) {
+    const bmp = await createImageBitmap(file).catch(() => null);
+    const w = bmp ? bmp.width : 0, h = bmp ? bmp.height : 0;
+    const colors = bmp ? sampleColors(bmp) : [];
+    let blob = file, mime = file.type || 'image/jpeg';
+    if (bmp && file.size > 8 * 1024 * 1024) {
+      const s = Math.min(1, 2400 / Math.max(w, h));
+      const c = document.createElement('canvas'); c.width = Math.round(w*s); c.height = Math.round(h*s);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92)); mime = 'image/jpeg';
+    }
+    const data = await toB64(blob);
+    const small = bmp ? await smallFrom(bmp, 1568).catch(() => ({ data, mime })) : { data, mime };
+    return { data, mime, w, h, colors, small, thumb: bmp ? thumbFrom(bmp) : '' };
+  }
+
+  /* ---------- AI providers ---------- */
+  async function readJson(r) { return r.json().catch(() => ({})); }
+  function fail(r, j) { const e = new Error(j?.error?.message || (typeof j?.error === 'string' ? j.error : '') || r.statusText || 'Request failed'); e.code = r.status; return e; }
+
+  async function geminiCall(prompt, imgs, st) {
+    const parts = [{ text: prompt }, ...imgs.map(i => ({ inline_data: { mime_type: i.mime, data: i.data } }))];
+    const body = { contents: [{ parts }], generationConfig: { temperature: 0.1, maxOutputTokens: 8192 } };
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(st.model)}:generateContent`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': st.key }, body: JSON.stringify(body) });
+    const j = await readJson(r);
+    if (!r.ok) throw fail(r, j);
+    return (j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
+  }
+
+  async function oaiCall(prompt, imgs, st) {
+    const url = st.p === 'groq' ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+    const content = [{ type: 'text', text: prompt }, ...imgs.map(i => ({ type: 'image_url', image_url: { url: `data:${i.small.mime};base64,${i.small.data}` } }))];
+    const body = { model: st.model, messages: [{ role: 'user', content }], temperature: 0.1, max_tokens: 4096 };
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + st.key }, body: JSON.stringify(body) });
+    const j = await readJson(r);
+    if (!r.ok) throw fail(r, j);
+    const c = j.choices?.[0]?.message?.content;
+    return (Array.isArray(c) ? c.map(x => x.text || '').join('') : (c || '')).trim();
+  }
+
+  const label = st => st.p === 'gemini' ? st.model : `${st.p}:${st.model}`;
+
+  const cool = new Map(); // models that just hit a rate limit are skipped for a minute
+  async function callAny(prompt, imgs, fullChain, onTry) {
+    let last; const dead = new Set();
+    const now = Date.now();
+    const ready = fullChain.filter(st => (cool.get(label(st)) || 0) < now);
+    const chain = ready.length ? ready : fullChain;
+    for (const st of chain) {
+      if (dead.has(st.p)) continue;
+      usageBump(label(st)); onTry && onTry(label(st));
+      try {
+        const text = await (st.p === 'gemini' ? geminiCall(prompt, imgs, st) : oaiCall(prompt, imgs, st));
+        if (!text) throw new Error('The model returned no text (the image may have been blocked).');
+        return { text, model: label(st) };
+      } catch (e) {
+        e.model = label(st); e.provider = st.p; last = e;
+        if (e.code === 429) cool.set(label(st), Date.now() + 60000);
+        if (e.code === 401 || e.code === 403 || /api key|invalid.*key|unauthori[sz]ed/i.test(e.message || '')) dead.add(st.p);
+      }
+    }
+    throw last;
+  }
+
+  // Removes wrapper quotes, tags, code-fence wrappers and chatty openers some models add.
+  function cleanText(t) {
+    let x = (t || '').trim();
+    x = x.replace(/^(?:here(?:'s| is)|below is|sure[,!.]|okay[,!.])[^\n]*\n+/i, '');
+    x = x.replace(/^\s*(?:"{3}|<\/?description>)\s*/i, '').replace(/\s*(?:"{3}|<\/?description>)\s*$/i, '');
+    x = x.replace(/^\s*-{3,}\s*\n/, '').replace(/\n\s*-{3,}\s*$/, '');
+    return x.trim();
+  }
+
+  function errText(e) {
+    const m = (e.message || '').slice(0, 120);
+    return e.code === 429 ? `Still at the rate limit after waiting (last: ${e.model}). Daily free limits reset later, so add a backup provider or try again later.`
+      : e.code === 404 ? `Model not found (${e.model}). Click Find models.`
+      : (e.code === 401 || e.code === 403) ? `Key problem with ${e.provider || 'the provider'}: ${m}`
+      : `Failed (${e.model || 'request'}): ${m}`;
+  }
+
+  function getChain() {
+    const gk = $('key').value.trim(), rk = $('gkey').value.trim(), ok = $('okey').value.trim();
+    try {
+      if ($('remember').checked) { localStorage.setItem('gk', gk); localStorage.setItem('grk', rk); localStorage.setItem('ork', ok); }
+      else ['gk', 'grk', 'ork'].forEach(k => localStorage.removeItem(k));
+    } catch {}
+    const chain = [];
+    if (gk) csv('model').forEach(m => chain.push({ p: 'gemini', model: m, key: gk }));
+    if (rk) csv('gmodel').forEach(m => chain.push({ p: 'groq', model: m, key: rk }));
+    if (ok) csv('omodel').forEach(m => chain.push({ p: 'openrouter', model: m, key: ok }));
+    if (!chain.length) { alert('Paste at least one API key (Gemini, Groq or OpenRouter) and make sure its model list is not empty.'); return null; }
+    return chain;
+  }
+
+  async function selfCheck(img, desc, chain, onTry) {
+    const r = await callWait(verifyPrompt(img, desc), [img], chain, onTry);
+    const t = r.text, i = t.search(/CORRECTED DESCRIPTION:?/i);
+    let corrected = t, errors = '';
+    if (i >= 0) {
+      corrected = t.slice(i).replace(/^CORRECTED DESCRIPTION:?\s*/i, '').trim();
+      errors = t.slice(0, i).replace(/^ERRORS FOUND:?\s*/i, '').trim();
+    }
+    corrected = cleanText(corrected);
+    if (!corrected) throw new Error('the self-check returned nothing');
+    return { text: corrected, errors: cleanText(errors), model: r.model };
+  }
+
+  /* ---------- history ---------- */
+  const HKEY = 'ids_history_v1';
+  const histLoad = () => { try { return JSON.parse(localStorage.getItem(HKEY) || '[]'); } catch { return []; } };
+  const histWrite = arr => { try { localStorage.setItem(HKEY, JSON.stringify(arr)); return true; } catch { return false; } };
+  const sig = () => JSON.stringify([$('lang').value, $('tiles').value, $('out').value, $('mode').value, $('detail').value, $('focus').value.trim(), $('question').value.trim(), $('verify').checked, $('ocr').checked, $('ocrlang').value]);
+
+  function saveHist(it) {
+    if (!it.key || !it.text.trim()) return;
+    let arr = histLoad().filter(h => h.key !== it.key);
+    arr.unshift({ key: it.key, sig: it.sig || sig(), name: nameOf(it), ts: Date.now(), text: it.text, kind: it.kind || 'describe', thumb: it.thumb || '' });
+    arr = arr.slice(0, 40);
+    while (arr.length && !histWrite(arr)) arr.pop();
+    renderHist();
+  }
+
+  function renderHist() {
+    const arr = histLoad(), box = $('histList'); box.innerHTML = '';
+    $('histSum').textContent = `History (${arr.length} saved)`;
+    $('histClear').disabled = !arr.length;
+    if (!arr.length) { box.innerHTML = '<p class="hint">Nothing saved yet. Descriptions are saved automatically.</p>'; return; }
+    arr.forEach(h => {
+      const row = document.createElement('div'); row.className = 'hist';
+      row.innerHTML = '<img alt=""><div class="meta"></div><div class="acts"><button class="small add" type="button">Add to list</button><button class="small cp" type="button">Copy</button><button class="small del" type="button">Delete</button></div>';
+      if (h.thumb) row.querySelector('img').src = h.thumb;
+      row.querySelector('.meta').textContent = `${h.name} · ${new Date(h.ts).toLocaleString()} · ${h.text.length.toLocaleString()} characters`;
+      row.querySelector('.add').addEventListener('click', () => {
+        items.push({ id: nextId++, file: null, key: null, name: h.name, kind: h.kind || 'describe', url: h.thumb, thumb: h.thumb, text: h.text, review: '', status: 'From history', err: false }); render();
+      });
+      const cp = row.querySelector('.cp');
+      cp.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(h.text); } catch {}
+        cp.textContent = 'Copied'; setTimeout(() => cp.textContent = 'Copy', 1500);
+      });
+      row.querySelector('.del').addEventListener('click', () => { histWrite(histLoad().filter(x => x.key !== h.key)); renderHist(); });
+      box.appendChild(row);
+    });
+  }
+  $('histClear').addEventListener('click', () => { if (confirm('Delete all saved descriptions from this browser?')) { histWrite([]); renderHist(); } });
+  renderHist();
+
+  /* ---------- local OCR ---------- */
+  let tessPromise;
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve();
+    if (!tessPromise) tessPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+      s.onload = res; s.onerror = () => { tessPromise = null; rej(new Error('OCR library failed to load')); };
+      document.head.appendChild(s);
+    });
+    return tessPromise;
+  }
+
+  /* ---------- describe ---------- */
+  let stopFlag = false;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const prog = $('prog'), stopBtn = $('stop');
+  stopBtn.addEventListener('click', () => { stopFlag = true; stopBtn.disabled = true; });
+
+  // Waits out a per-minute rate limit and tries again (up to 3 attempts), with a visible countdown.
+  async function callWait(prompt, imgs, chain, setStatus) {
+    for (let attempt = 0; ; attempt++) {
+      try { return await callAny(prompt, imgs, chain, m => setStatus(`Trying ${m}...`)); }
+      catch (e) {
+        if (e.code !== 429 || attempt >= 2 || stopFlag) throw e;
+        const now = Date.now();
+        const soon = chain.map(st => cool.get(label(st)) || 0).filter(t => t > now);
+        const wait = soon.length ? Math.min(Math.max(Math.min(...soon) - now, 3000), 65000) : 30000;
+        for (let sec = Math.ceil(wait / 1000); sec > 0 && !stopFlag; sec--) {
+          setStatus(`Rate limit reached. Waiting ${sec}s, then trying again (attempt ${attempt + 2} of 3)...`);
+          await sleep(1000);
+        }
+        if (stopFlag) throw e;
+      }
+    }
+  }
+
+  async function cropImage(bmp, reg) {
+    const sx = Math.round(reg.x * bmp.width), sy = Math.round(reg.y * bmp.height);
+    const sw = Math.max(1, Math.round(reg.w * bmp.width)), sh = Math.max(1, Math.round(reg.h * bmp.height));
+    const scale = Math.max(1, Math.min(3, 900 / Math.max(sw, sh)));
+    const c = document.createElement('canvas'); c.width = Math.round(sw * scale); c.height = Math.round(sh * scale);
+    c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+    const img = { data: await toB64(blob), mime: 'image/jpeg', w: sw, h: sh, colors: sampleColors(c) };
+    img.small = await smallFrom(c, 1568).catch(() => ({ data: img.data, mime: img.mime }));
+    return img;
+  }
+
+  // Splits the image into a g x g grid (tiles overlap a little) and describes each tile.
+  async function describeTiles(it, g, chain, setStatus) {
+    const bmp = await createImageBitmap(it.file);
+    const pad = 0.06 / g, focus = $('focus').value.trim(), out = [], total = g * g; let k = 0;
+    const pct = v => Math.round(v * 100);
+    for (let r = 0; r < g; r++) for (let c = 0; c < g; c++) {
+      if (stopFlag) break;
+      k++;
+      const x0 = Math.max(0, c / g - pad), x1 = Math.min(1, (c + 1) / g + pad);
+      const y0 = Math.max(0, r / g - pad), y1 = Math.min(1, (r + 1) / g + pad);
+      const lbl = `x ${pct(x0)}% to ${pct(x1)}%, y ${pct(y0)}% to ${pct(y1)}%`;
+      const head = `[Tile row ${r + 1}, column ${c + 1}: ${lbl}]`;
+      try {
+        const tile = await cropImage(bmp, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+        const prompt = `This picture is one tile (row ${r + 1}, column ${c + 1} of a ${g} x ${g} grid) cut from a larger ${bmp.width} x ${bmp.height} pixel image, covering ${lbl}. Neighbouring tiles overlap slightly. Measured colors of this tile: ${tile.colors.join('; ')}. Describe everything in this tile precisely: every object, shape, color, texture, its position inside the tile, and all visible text word for word. Say "unclear" instead of guessing. Keep it to about 150 words, with no introduction.${langLine()}` + (focus ? ` Pay special attention to: ${focus}.` : '');
+        const t = await callWait(prompt, [tile], chain, s => setStatus(`Tile ${k} of ${total}: ${s}`));
+        out.push(`${head}\n${cleanText(t.text)}`);
+      } catch (e) {
+        out.push(`${head}\n(could not be described: ${errText(e)})`);
+        if (e.code === 429) break;
+      }
+    }
+    return out.length ? `TILE DETAILS (the image is split into a ${g} x ${g} grid, and the tiles overlap slightly):\n` + out.join('\n\n') : '';
+  }
+
+  async function processItems(list) {
+    const chain = getChain(); if (!chain) return;
+    const q = $('question').value.trim();
+    const kindNow = q ? 'answer' : $('out').value;
+    const isDesc = kindNow === 'describe';
+    const useOcr = $('ocr').checked && isDesc;
+    const useCheck = $('verify').checked && isDesc;
+    const tilesN = isDesc ? (parseInt($('tiles').value, 10) || 0) : 0;
+    const mySig = sig();
+    busy = true; stopFlag = false; stopBtn.disabled = false; stopBtn.hidden = false;
+    prog.max = Math.max(1, list.length); prog.value = 0; prog.hidden = false; render();
+    let worker = null, ocrNote = '';
+    const needAi = list.some(it => !it.text && !(it.key && histLoad().some(h => h.key === it.key && h.sig === mySig)));
+    if (useOcr && needAi) {
+      try { await loadTesseract(); worker = await Tesseract.createWorker($('ocrlang').value, 1); }
+      catch (e) { ocrNote = ' (OCR unavailable: check your connection)'; }
+    }
+    for (let idx = 0; idx < list.length; idx++) {
+      const it = list[idx];
+      if (stopFlag) break;
+      prog.value = idx;
+      if (it.text) continue;
+      const saved = it.key && histLoad().find(h => h.key === it.key && h.sig === mySig);
+      if (saved) { it.text = saved.text; it.kind = saved.kind || 'describe'; it.status = 'Loaded from history (no quota used)'; it.err = false; render(); continue; }
+      it.err = false; it.review = ''; it.original = ''; it.checked = ''; it.status = 'Working...'; render();
+      const setS = s => { it.status = s; render(); };
+      try {
+        const img = await prepare(it.file);
+        it.thumb = img.thumb; it.sig = mySig; it.kind = kindNow;
+        const r = await callWait(buildPrompt(img), [img], chain, setS);
+        it.text = cleanText(r.text); let base = `Done (${r.model})`; it.status = base;
+        if (useCheck) {
+          it.status = 'Self-checking...'; render();
+          try {
+            const c = await selfCheck(img, it.text, preferOther(chain, r.model), s => setS('Self-checking: ' + s));
+            it.original = it.text; it.checked = c.text; it.text = c.text; it.review = c.errors; base = `Done + checked (${c.model})`; it.status = base;
+          } catch (e) { base = `Done (${r.model}), self-check skipped: ${(e.message || '').slice(0, 60)}`; it.status = base; }
+        }
+        if (tilesN) {
+          const tiles = await describeTiles(it, tilesN, chain, setS);
+          if (tiles) { it.text += '\n\n' + tiles; base += ` + ${tilesN * tilesN} tiles`; }
+          it.status = base;
+        }
+        const hasLayer = isDesc && it.extraText && it.extraText.length > 20;
+        if (hasLayer) { it.text += `\n\nEXACT TEXT (from the PDF's own text layer):\n${it.extraText}`; it.status += ' · PDF text added'; }
+        if (worker && !hasLayer) {
+          it.status += ' · reading text with OCR...'; render();
+          try {
+            const { data } = await worker.recognize(it.file);
+            const t = data.text.trim();
+            if (t) it.text += `\n\nEXACT TEXT (read by OCR, may contain small errors):\n${t}`;
+            it.status = base + (t ? ' · OCR added' : ' · no OCR text found');
+          } catch { it.status = base + ' · OCR failed'; }
+        } else if (ocrNote && !hasLayer) it.status += ocrNote;
+        saveHist(it);
+      } catch (e) {
+        it.err = true; it.status = errText(e); it.errCode = e.code;
+        if (e.code === 429) { render(); break; }
+      }
+      prog.value = idx + 1;
+      render();
+    }
+    if (worker) { try { await worker.terminate(); } catch {} }
+    busy = false; prog.hidden = true; stopBtn.hidden = true; render();
+    const doneN = list.filter(i => i.text.trim()).length, failN = list.filter(i => i.err).length;
+    $('sr').textContent = `Finished. ${doneN} ready${failN ? `, ${failN} failed` : ''}.`;
+    if (doneN && !stopFlag) {
+      toast(failN ? `${doneN} ready, ${failN} failed. Your text is below.` : 'Done. Your text is ready to copy.');
+      $('outPanel').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      $('copy').focus({ preventScroll: true });
+    }
+  }
+  runBtn.addEventListener('click', () => processItems(items));
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !runBtn.disabled) { e.preventDefault(); runBtn.click(); }
+  });
+
+  /* ---------- compare two images ---------- */
+  cmpBtn.addEventListener('click', async () => {
+    const chain = getChain(); if (!chain) return;
+    const ref = items.find(i => String(i.id) === $('cmpRef').value), cp = items.find(i => String(i.id) === $('cmpCopyImg').value);
+    if (!ref || !cp || ref === cp || !ref.file || !cp.file) { alert('Pick two different images: the reference and the copy.'); return; }
+    busy = true; cmpBtn.textContent = 'Comparing...'; render();
+    try {
+      const A = await prepare(ref.file), B = await prepare(cp.file);
+      const r = await callWait(comparePrompt(A, B), [A, B], chain, st => { cmpBtn.textContent = st.slice(0, 26); });
+      $('cmpOut').value = `Reference: ${nameOf(ref)}\nGenerated copy: ${nameOf(cp)}\n\n${r.text}`;
+      $('cmpPanel').hidden = false;
+      $('cmpPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      alert('Comparison failed. ' + errText(e));
+    } finally {
+      busy = false; cmpBtn.textContent = 'Compare'; render();
+    }
+  });
+  function renderCompare() {
+    const withFile = items.filter(i => i.file), panel = $('cmpSetup');
+    panel.hidden = withFile.length < 2;
+    if (panel.hidden) { cmpBtn.disabled = true; return; }
+    const ref = $('cmpRef'), cp = $('cmpCopyImg'), keepR = ref.value, keepC = cp.value;
+    [ref, cp].forEach(sel => {
+      sel.innerHTML = '';
+      withFile.forEach(i => { const o = document.createElement('option'); o.value = String(i.id); o.textContent = `Image ${items.indexOf(i) + 1}: ${nameOf(i)}`; sel.appendChild(o); });
+    });
+    ref.value = withFile.some(i => String(i.id) === keepR) ? keepR : String(withFile[0].id);
+    cp.value = withFile.some(i => String(i.id) === keepC) ? keepC : String(withFile[1].id);
+    cmpBtn.disabled = busy || ref.value === cp.value;
+  }
+  ['cmpRef', 'cmpCopyImg'].forEach(id => $(id).addEventListener('change', () => { cmpBtn.disabled = busy || $('cmpRef').value === $('cmpCopyImg').value; }));
+  $('cmpCopy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('cmpOut').value); } catch { $('cmpOut').select(); document.execCommand('copy'); }
+    $('cmpCopy').textContent = 'Copied'; setTimeout(() => $('cmpCopy').textContent = 'Copy', 1500);
+  });
+
+  /* ---------- region zoom ---------- */
+  const dlg = $('zoom'), zimg = $('zimg'), zwrap = $('zwrap'), selBox = $('sel'), zgo = $('zgo'), zinfo = $('zinfo');
+  let zItem = null, sel = null, start = null;
+
+  function openZoom(it) {
+    if (!it.file) return;
+    zItem = it; sel = null; start = null;
+    selBox.style.display = 'none'; zgo.disabled = true; zgo.textContent = 'Describe region'; zinfo.textContent = '';
+    zimg.src = it.url; dlg.showModal();
+  }
+  $('zcancel').addEventListener('click', () => dlg.close());
+
+  function pos(e) {
+    const r = zimg.getBoundingClientRect();
+    return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
+  }
+  function drawSel() {
+    if (!sel) return;
+    const r = zimg.getBoundingClientRect(), o = zwrap.getBoundingClientRect();
+    selBox.style.display = 'block';
+    selBox.style.left = (r.left - o.left + sel.x * r.width) + 'px';
+    selBox.style.top = (r.top - o.top + sel.y * r.height) + 'px';
+    selBox.style.width = (sel.w * r.width) + 'px';
+    selBox.style.height = (sel.h * r.height) + 'px';
+    zinfo.textContent = `Region: x ${Math.round(sel.x*100)}% to ${Math.round((sel.x+sel.w)*100)}%, y ${Math.round(sel.y*100)}% to ${Math.round((sel.y+sel.h)*100)}%`;
+    zgo.disabled = sel.w < 0.02 || sel.h < 0.02;
+  }
+  zwrap.addEventListener('pointerdown', e => { e.preventDefault(); zwrap.setPointerCapture(e.pointerId); start = pos(e); sel = { x: start.x, y: start.y, w: 0, h: 0 }; drawSel(); });
+  zwrap.addEventListener('pointermove', e => {
+    if (!start) return; const p = pos(e);
+    sel = { x: Math.min(start.x, p.x), y: Math.min(start.y, p.y), w: Math.abs(p.x - start.x), h: Math.abs(p.y - start.y) }; drawSel();
+  });
+  zwrap.addEventListener('pointerup', () => { start = null; });
+
+  zgo.addEventListener('click', async () => {
+    if (!sel || !zItem) return;
+    const chain = getChain(); if (!chain) return;
+    const it = zItem, region = { ...sel };
+    zgo.disabled = true; zgo.textContent = 'Describing...';
+    try {
+      const bmp = await createImageBitmap(it.file);
+      const sx = Math.round(region.x * bmp.width), sy = Math.round(region.y * bmp.height);
+      const sw = Math.max(1, Math.round(region.w * bmp.width)), sh = Math.max(1, Math.round(region.h * bmp.height));
+      const scale = Math.max(1, Math.min(3, 900 / Math.max(sw, sh)));
+      const c = document.createElement('canvas'); c.width = Math.round(sw * scale); c.height = Math.round(sh * scale);
+      c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+      const img = { data: await toB64(blob), mime: 'image/png', w: sw, h: sh, colors: sampleColors(c) };
+      img.small = await smallFrom(c, 1568).catch(() => ({ data: img.data, mime: img.mime }));
+      const lbl = `x ${Math.round(region.x*100)}% to ${Math.round((region.x+region.w)*100)}%, y ${Math.round(region.y*100)}% to ${Math.round((region.y+region.h)*100)}%`;
+      const focus = $('focus').value.trim(), q = $('question').value.trim();
+      const prompt = `This picture is a cropped region (${lbl}) of a larger ${bmp.width} x ${bmp.height} pixel image. Measured colors of this region: ${img.colors.join('; ')}. ` +
+        (q ? `Answer this question about the region: "${q}". Give the direct answer, then the evidence, quoting text exactly. `
+           : `Describe everything in this region in detail: every object, shape, color, texture, position within the crop, and all text word for word. Mention anything cut off at the edges of the crop. Write "unclear" instead of guessing. `) +
+        (focus ? `Pay special attention to: ${focus}.` : '');
+      const r = await callAny(prompt, [img], chain);
+      it.text += (it.text ? '\n\n' : '') + `[Zoomed region: ${lbl}]\n${r.text}`;
+      it.status = `Region added (${r.model})`; it.err = false;
+      saveHist(it);
+      dlg.close(); render();
+    } catch (e) {
+      zinfo.textContent = errText(e); zgo.disabled = false; zgo.textContent = 'Describe region';
+    }
+  });
+
+  /* ---------- find models ---------- */
+  function modelButtons(out, names, inputId) {
+    names.forEach(n => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'small'; b.textContent = n; b.style.margin = '3px 4px 0 0';
+      b.addEventListener('click', () => {
+        const cur = csv(inputId); if (!cur.includes(n)) cur.push(n); $(inputId).value = cur.join(', ');
+      });
+      out.appendChild(b);
+    });
+  }
+
+  $('find').addEventListener('click', async () => {
+    const key = $('key').value.trim(), out = $('found'), btn = $('find');
+    if (!key) { alert('Paste your Gemini API key first.'); return; }
+    btn.disabled = true; out.textContent = 'Asking Google...';
+    try {
+      const names = []; let token = '';
+      do {
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200' + (token ? '&pageToken=' + encodeURIComponent(token) : ''), { headers: { 'x-goog-api-key': key } });
+        const j = await readJson(r);
+        if (!r.ok) throw fail(r, j);
+        names.push(...(j.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace(/^models\//, '')));
+        token = j.nextPageToken || '';
+      } while (token);
+      const usable = names.filter(n => /^gemini/.test(n) && !/(tts|image|live|audio|embedding|veo|imagen|robotics|computer-use|deep-research|transcribe|omni|argon|nano|banana|pro)/.test(n));
+      out.textContent = `${usable.length} text and vision models are listed for your key. Click a name to add it. Being listed does not guarantee free access. `;
+      modelButtons(out, usable, 'model');
+    } catch (e) { out.textContent = 'Could not list models: ' + (e.message || '').slice(0, 160); }
+    btn.disabled = false;
+  });
+
+  $('gfind').addEventListener('click', async () => {
+    const key = $('gkey').value.trim(), out = $('gfound'), btn = $('gfind');
+    if (!key) { alert('Paste your Groq API key first.'); return; }
+    btn.disabled = true; out.textContent = 'Asking Groq...';
+    try {
+      const r = await fetch('https://api.groq.com/openai/v1/models', { headers: { 'Authorization': 'Bearer ' + key } });
+      const j = await readJson(r); if (!r.ok) throw fail(r, j);
+      const all = (j.data || []).map(m => m.id).filter(n => !/(whisper|tts|guard|orpheus|embed|playai|safeguard)/i.test(n));
+      const likely = all.filter(n => /(vision|scout|maverick|llama-4|qwen|gemma|pixtral|vl\b)/i.test(n));
+      const names = likely.length ? likely : all;
+      out.textContent = `${names.length} models listed${likely.length ? ' (filtered to ones likely to read images)' : ''}. Click a name to add it. Check console.groq.com/docs/vision for the official vision list. `;
+      modelButtons(out, names, 'gmodel');
+    } catch (e) { out.textContent = 'Could not list Groq models: ' + (e.message || '').slice(0, 160); }
+    btn.disabled = false;
+  });
+
+  $('ofind').addEventListener('click', async () => {
+    const out = $('ofound'), btn = $('ofind');
+    btn.disabled = true; out.textContent = 'Asking OpenRouter...';
+    try {
+      const r = await fetch('https://openrouter.ai/api/v1/models');
+      const j = await readJson(r); if (!r.ok) throw fail(r, j);
+      const names = (j.data || []).filter(m => (m.architecture?.input_modalities || []).includes('image')
+          && (m.architecture?.output_modalities || ['text']).includes('text')
+          && m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)
+        .sort((a, b) => (b.created || 0) - (a.created || 0)).slice(0, 25).map(m => m.id);
+      out.textContent = names.length ? `${names.length} free models that read images. Click a name to add it. ` : 'No free vision models were listed right now.';
+      modelButtons(out, names, 'omodel');
+    } catch (e) { out.textContent = 'Could not list OpenRouter models: ' + (e.message || '').slice(0, 160); }
+    btn.disabled = false;
+  });
+
+
+  /* ---------- navigation ---------- */
+  const navMenu = $('navMenu'), navToggle = $('navToggle');
+  function closeNav() { navMenu.classList.remove('open'); navToggle.setAttribute('aria-expanded', 'false'); navToggle.setAttribute('aria-label', 'Open menu'); }
+  navToggle.addEventListener('click', () => {
+    const open = navMenu.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', String(open)); navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && navMenu.classList.contains('open')) { closeNav(); navToggle.focus(); } });
+  navMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => closeNav()));
+  document.querySelectorAll('[data-open]').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault();
+    if (a.dataset.view) showView(a.dataset.view, false, 'push');
+    const t = $(a.dataset.open); if (!t) return;
+    if (t.tagName === 'DETAILS') t.open = true;
+    t.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }));
+  $('navAdd').addEventListener('click', () => { closeNav(); fileInput.click(); });
+
+  /* ---------- matrix rain ---------- */
+  (function () {
+    const cv = $('rain'), ctx = cv.getContext && cv.getContext('2d'), btn = $('rainToggle');
+    if (!ctx) { cv.style.display = 'none'; btn.hidden = true; return; }
+    const reduce = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false, addEventListener() {} };
+    const FS = 10, LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('');
+    let drops = [], raf = 0, last = 0, on = true;
+    try { on = localStorage.getItem('rain') !== 'off'; } catch {}
+
+    function size() {
+      cv.width = window.innerWidth; cv.height = window.innerHeight; ctx.font = FS + 'px monospace';
+      drops = Array.from({ length: Math.ceil(cv.width / FS) }, () => Math.floor(Math.random() * cv.height / FS));
+    }
+    function step() {
+      const light = document.documentElement.dataset.theme === 'light';
+      ctx.fillStyle = light ? 'rgba(243, 246, 244, .12)' : 'rgba(0, 0, 0, .1)'; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.fillStyle = light ? '#1f9e3a' : '#70f37d';
+      for (let i = 0; i < drops.length; i++) {
+        ctx.fillText(LETTERS[(Math.random() * LETTERS.length) | 0], i * FS, drops[i] * FS);
+        drops[i]++;
+        if (drops[i] * FS > cv.height && Math.random() > .95) drops[i] = 0;
+      }
+    }
+    function loop(t) { raf = requestAnimationFrame(loop); if (document.hidden || t - last < 30) return; last = t; step(); }
+    function apply() {
+      cancelAnimationFrame(raf); raf = 0;
+      btn.textContent = on ? 'Rain: on' : 'Rain: off'; btn.setAttribute('aria-pressed', String(on));
+      cv.style.visibility = on ? 'visible' : 'hidden';
+      if (!on) return;
+      size();
+      if (reduce.matches) { for (let i = 0; i < 90; i++) step(); }   // one still frame, no motion
+      else raf = requestAnimationFrame(loop);
+    }
+    btn.addEventListener('click', () => { on = !on; try { localStorage.setItem('rain', on ? 'on' : 'off'); } catch {} apply(); });
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (on) apply(); }, 200); });
+    if (reduce.addEventListener) reduce.addEventListener('change', apply);
+    document.addEventListener('themechange', () => { if (on) apply(); });
+    apply();
+  })();
+
+  /* ---------- language, second opinion, usage ---------- */
+  function langLine() {
+    const L = $('lang').value;
+    return L && L !== 'English' ? `\nWrite your answer in ${L}. Keep any text that appears in the image in its original language, and keep hex codes and code unchanged.` : '';
+  }
+  // Puts models other than the one that wrote the text first, so a different model checks it.
+  const preferOther = (chain, used) => used ? [...chain.filter(st => label(st) !== used), ...chain.filter(st => label(st) === used)] : chain;
+
+  const UKEY = 'ids_usage_v1', today = () => new Date().toLocaleDateString('en-CA');
+  function usageLoad() { try { const u = JSON.parse(localStorage.getItem(UKEY) || '{}'); return u.d === today() ? u : { d: today(), n: {} }; } catch { return { d: today(), n: {} }; } }
+  function usageBump(l) { const u = usageLoad(); u.n[l] = (u.n[l] || 0) + 1; try { localStorage.setItem(UKEY, JSON.stringify(u)); } catch {} renderUsage(); }
+  function renderUsage() { const p = Object.entries(usageLoad().n).map(([k, v]) => `${k} ${v}`); $('usage').textContent = p.length ? p.join(', ') : 'none'; }
+  $('usageReset').addEventListener('click', () => { try { localStorage.removeItem(UKEY); } catch {} renderUsage(); });
+
+  function estimate() {
+    const q = $('question').value.trim(), desc = !q && $('out').value === 'describe';
+    const g = desc ? (parseInt($('tiles').value, 10) || 0) : 0;
+    const per = 1 + (desc && $('verify').checked ? 1 : 0) + g * g;
+    const n = items.filter(i => !i.text).length;
+    const parts = [];
+    if (desc) {
+      parts.push({ short: 'short', standard: 'standard', full: 'exhaustive' }[$('detail').value] + ' detail');
+      if (g) parts.push(`${g} x ${g} tiles`);
+      if ($('verify').checked) parts.push('self-check');
+      if ($('ocr').checked) parts.push('OCR');
+    }
+    if (!$('lang').disabled && $('lang').value !== 'English') parts.push($('lang').value);
+    if (q) parts.push('answering a question');
+    $('advSum').textContent = parts.length ? `More options (${parts.join(', ')})` : 'More options';
+    $('estimate').textContent = n ? `This run needs about ${n * per} request${n * per === 1 ? '' : 's'} (${per} per image). Saved descriptions from history cost nothing.` : '';
+  }
+  ['out', 'tiles', 'verify'].forEach(id => $(id).addEventListener('change', estimate));
+  $('question').addEventListener('input', estimate);
+
+  /* ---------- presets ---------- */
+  const PFIELDS = ['out', 'mode', 'detail', 'tiles', 'lang', 'focus', 'question', 'pdfPages', 'ocrlang', 'verify', 'ocr'];
+  const P = o => Object.assign({ out: 'describe', mode: 'general', detail: 'full', tiles: '0', lang: 'English', focus: '', question: '', verify: true, ocr: false }, o);
+  const BUILTIN = {
+    'Quick and light': P({ detail: 'short', verify: false }),
+    'Most accurate (slow)': P({ tiles: '2', verify: true }),
+    'UI screenshot to code': P({ out: 'code' }),
+    'Diagram to Mermaid': P({ out: 'mermaid' }),
+    'Chart or table to CSV': P({ out: 'csv' }),
+    'Study notes from a page': P({ mode: 'doc', detail: 'standard', ocr: true, focus: 'Organize it as study notes: key terms, definitions, main points and any numbers' }),
+    'Accessibility alt text': P({ out: 'alt' })
+  };
+  const PKEY = 'ids_presets_v1';
+  const userPresets = () => { try { return JSON.parse(localStorage.getItem(PKEY) || '{}'); } catch { return {}; } };
+  const getSettings = () => { const o = {}; PFIELDS.forEach(id => { const el = $(id); o[id] = el.type === 'checkbox' ? el.checked : el.value; }); return o; };
+  function applySettings(o) {
+    PFIELDS.forEach(id => { if (!(id in o)) return; const el = $(id); if (el.type === 'checkbox') el.checked = !!o[id]; else el.value = o[id]; });
+    syncOut(); estimate();
+  }
+  function renderPresets(selected) {
+    const sel = $('preset'); sel.innerHTML = '<option value="">Choose a preset...</option>';
+    const g1 = document.createElement('optgroup'); g1.label = 'Built in';
+    Object.keys(BUILTIN).forEach(n => { const o = document.createElement('option'); o.value = 'b:' + n; o.textContent = n; g1.appendChild(o); });
+    sel.appendChild(g1);
+    const names = Object.keys(userPresets());
+    if (names.length) {
+      const g2 = document.createElement('optgroup'); g2.label = 'Yours';
+      names.forEach(n => { const o = document.createElement('option'); o.value = 'u:' + n; o.textContent = n; g2.appendChild(o); });
+      sel.appendChild(g2);
+    }
+    if (selected) sel.value = selected;
+    $('presetDel').disabled = !sel.value.startsWith('u:');
+  }
+  $('preset').addEventListener('change', () => {
+    const v = $('preset').value; $('presetDel').disabled = !v.startsWith('u:');
+    if (!v) return;
+    const name = v.slice(2), o = v.startsWith('b:') ? BUILTIN[name] : userPresets()[name];
+    if (o) { applySettings(o); if (v.startsWith('u:')) $('presetName').value = name; }
+  });
+  $('presetSave').addEventListener('click', () => {
+    const name = $('presetName').value.trim();
+    if (!name) { $('presetName').focus(); return; }
+    const all = userPresets(); all[name] = getSettings();
+    try { localStorage.setItem(PKEY, JSON.stringify(all)); } catch {}
+    renderPresets('u:' + name);
+  });
+  $('presetDel').addEventListener('click', () => {
+    const v = $('preset').value; if (!v.startsWith('u:')) return;
+    const all = userPresets(); delete all[v.slice(2)];
+    try { localStorage.setItem(PKEY, JSON.stringify(all)); } catch {}
+    renderPresets('');
+  });
+
+  /* ---------- export ---------- */
+  function downloadText(name, text, mime) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime + ';charset=utf-8' }));
+    a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  }
+  const maybeMask = t => ($('mask').checked ? maskText(t) : t);
+  $('saveMd').addEventListener('click', () => {
+    const done = items.filter(i => i.text.trim());
+    downloadText('image-descriptions.md', maybeMask('# Image descriptions\n\n' + done.map(it => `## Image ${items.indexOf(it) + 1}: ${nameOf(it)}\n\n${it.text.trim()}`).join('\n\n')) + '\n', 'text/markdown');
+  });
+  $('saveJson').addEventListener('click', () => {
+    const data = items.filter(i => i.text.trim()).map(it => ({ index: items.indexOf(it) + 1, name: nameOf(it), kind: it.kind || 'describe', text: maybeMask(it.text.trim()), selfCheck: it.review ? maybeMask(it.review) : '' }));
+    downloadText('image-descriptions.json', JSON.stringify(data, null, 2) + '\n', 'application/json');
+  });
+
+  /* ---------- delete saved data ---------- */
+  $('wipe').addEventListener('click', async () => {
+    if (!confirm('Delete your saved keys, history, presets and settings from this browser?')) return;
+    try { Object.keys(localStorage).filter(k => /^ids_/.test(k) || ['gk', 'grk', 'ork', 'theme', 'contrast', 'rain'].includes(k)).forEach(k => localStorage.removeItem(k)); } catch {}
+    try { if (window.caches) (await caches.keys()).forEach(k => caches.delete(k)); } catch {}
+    ['key', 'gkey', 'okey'].forEach(id => { $(id).value = ''; }); $('remember').checked = false;
+    renderHist(); renderUsage(); renderPresets(''); syncGuide(); estimate();
+    toast('Saved data deleted from this browser.');
+  });
+
+  /* ---------- reorder ---------- */
+  let dragId = null;
+  function moveItem(it, d) {
+    const i = items.indexOf(it), j = i + d;
+    if (i < 0 || j < 0 || j >= items.length) return;
+    [items[i], items[j]] = [items[j], items[i]]; render();
+    const el = list.children[j];
+    if (el) { const b = el.querySelector(d < 0 ? '.up' : '.dn'); (b && !b.disabled ? b : el.querySelector(d < 0 ? '.dn' : '.up')).focus(); }
+  }
+
+  /* ---------- what the self-check changed ---------- */
+  function lineDiff(a, b) {
+    const A = a.split('\n'), B = b.split('\n'), n = A.length, m = B.length;
+    if (n > 1500 || m > 1500) return null;
+    const same = (x, y) => x.trim() === y.trim();
+    const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = same(A[i], B[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    const out = []; let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (same(A[i], B[j])) { out.push([' ', B[j]]); i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) out.push(['-', A[i++]]); else out.push(['+', B[j++]]);
+    }
+    while (i < n) out.push(['-', A[i++]]); while (j < m) out.push(['+', B[j++]]);
+    return out;
+  }
+  function showDiff(it) {
+    const body = $('diffBody'); body.innerHTML = '';
+    $('diffTitle').textContent = 'What the self-check changed: ' + nameOf(it);
+    const d = lineDiff(it.original, it.checked);
+    const note = document.createElement('p'); note.className = 'hint'; note.style.marginTop = '0'; body.appendChild(note);
+    if (!d) { note.textContent = 'This description is too long to compare line by line.'; $('diff').showModal(); return; }
+    const add = d.filter(x => x[0] === '+').length, del = d.filter(x => x[0] === '-').length;
+    note.textContent = add || del ? `${add} line${add === 1 ? '' : 's'} added (+), ${del} removed (-). Lines that stayed the same are dimmed or hidden.` : 'The self-check found nothing to change.';
+    if (it.review && it.review.trim() && it.review.trim().toLowerCase() !== '- none') {
+      const p = document.createElement('p'); p.className = 'diffnote'; p.textContent = 'Mistakes the check reported:\n' + it.review.trim(); body.appendChild(p);
+    }
+    const box = document.createElement('div'); box.className = 'diffview'; box.setAttribute('role', 'region'); box.setAttribute('aria-label', 'Line by line changes'); box.tabIndex = 0;
+    const row = (cls, prefix, text) => { const r = document.createElement('div'); r.className = 'dl ' + cls; r.textContent = prefix + text; box.appendChild(r); };
+    for (let k = 0; k < d.length; k++) {
+      if (d[k][0] !== ' ') { row(d[k][0] === '+' ? 'add' : 'del', d[k][0] === '+' ? '+ ' : '- ', d[k][1]); continue; }
+      let e = k; while (e < d.length && d[e][0] === ' ') e++;
+      const run = d.slice(k, e);
+      if (run.length > 6) { run.slice(0, 2).forEach(x => row('', '  ', x[1])); row('gap', '', `... ${run.length - 4} unchanged lines ...`); run.slice(-2).forEach(x => row('', '  ', x[1])); }
+      else run.forEach(x => row('', '  ', x[1]));
+      k = e - 1;
+    }
+    body.appendChild(box); $('diff').showModal();
+  }
+  $('diffClose').addEventListener('click', () => $('diff').close());
+
+  /* ---------- folder mode ---------- */
+  let docTitle = '';
+  $('addFolder').addEventListener('click', () => $('folder').click());
+  $('folder').addEventListener('change', () => {
+    const all = [...$('folder').files]; $('folder').value = '';
+    if (!all.length) return;
+    const ok = all.filter(f => f.type.startsWith('image/') || isPdf(f) || f.type.startsWith('video/'));
+    ok.sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name, undefined, { numeric: true }));
+    const root = (all[0].webkitRelativePath || '').split('/')[0]; if (root) docTitle = root;
+    const use = ok.slice(0, 100);
+    addFiles(use);
+    const skipped = all.length - ok.length;
+    pdfNote.textContent = `Added ${use.length} file${use.length === 1 ? '' : 's'} from "${root || 'the folder'}" in name order` +
+      (ok.length > use.length ? `, stopped at the first 100 of ${ok.length}` : '') + (skipped ? `, skipped ${skipped} other file${skipped === 1 ? '' : 's'}` : '') + '.' +
+      (use.length > 30 ? ' That is a lot for the free quota, so check the request estimate before you start.' : '');
+  });
+
+  /* ---------- report and zip ---------- */
+  const escH = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const safeName = v => String(v).replace(/\.[^.\/]+$/, '').replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'image';
+  function downloadBlob(name, blob) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  }
+  async function reportImage(it) {
+    try {
+      const bmp = await createImageBitmap(it.file), k = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(bmp, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.82);
+    } catch { return it.thumb || ''; }
+  }
+  $('saveReport').addEventListener('click', async () => {
+    const done = items.filter(i => i.text.trim()); if (!done.length) return;
+    const btn = $('saveReport'), old = btn.textContent; btn.disabled = true; btn.textContent = 'Building...';
+    try {
+      const title = docTitle || 'Image descriptions';
+      let toc = '', secs = '';
+      for (const it of done) {
+        const n = items.indexOf(it) + 1, src = it.file ? await reportImage(it) : (it.thumb || '');
+        const body = ['code', 'mermaid', 'csv'].includes(it.kind) ? codeOf(it.text) : it.text.trim();
+        toc += `<li><a href="#img${n}">${escH(nameOf(it))}</a></li>\n`;
+        secs += `<section id="img${n}"><h2>${n}. ${escH(nameOf(it))}</h2>${src ? `<img src="${src}" alt="${escH(nameOf(it))}">` : ''}<pre>${escH(maybeMask(body))}</pre></section>\n`;
+      }
+      const html = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escH(title)}</title>
+<style>body{font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:860px;margin:0 auto;padding:24px;color:#14181a;background:#fff}h1{margin:0 0 4px}p.meta{color:#566;margin:0 0 20px}nav{background:#f3f6f4;border-radius:10px;padding:8px 16px}nav li{margin:2px 0}a{color:#0a6b2b}section{margin:32px 0;padding-top:18px;border-top:1px solid #cfd8d2}img{max-width:100%;height:auto;border:1px solid #cfd8d2;border-radius:8px;display:block;margin:10px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f7f6;padding:12px 14px;border-radius:8px;font:13.5px/1.55 ui-monospace,Consolas,monospace}@media print{section{break-inside:avoid-page}nav{display:none}}</style></head>
+<body><h1>${escH(title)}</h1><p class="meta">${done.length} image${done.length === 1 ? '' : 's'}. Made with Image Describer on ${escH(new Date().toLocaleDateString())}.</p>
+<nav aria-label="Contents"><ol>\n${toc}</ol></nav>\n${secs}</body></html>\n`;
+      downloadBlob(safeName(title) + '-report.html', new Blob([html], { type: 'text/html;charset=utf-8' }));
+      toast('Report downloaded.');
+    } catch (e) { toast('Could not build the report: ' + ((e && e.message) || 'unknown error')); }
+    btn.textContent = old; btn.disabled = false;
+  });
+
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function makeZip(files) {
+    const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+    const d = new Date(), dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    for (const f of files) {
+      const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+      lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true); lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true);
+      lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), name, f.data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+      ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true);
+      ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), name);
+      offset += 30 + name.length + size;
+    }
+    const csize = central.reduce((n, a) => n + a.length, 0), end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, csize, true); end.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+  }
+  $('saveZip').addEventListener('click', async () => {
+    const done = items.filter(i => i.text.trim()); if (!done.length) return;
+    const btn = $('saveZip'), old = btn.textContent; btn.disabled = true; btn.textContent = 'Building...';
+    try {
+      const withImg = $('zipImages').checked, enc = new TextEncoder(), files = [], rows = [];
+      const extFor = k => ({ code: 'html', mermaid: 'mmd', csv: 'csv' }[k] || 'txt');
+      for (const it of done) {
+        const idx = items.indexOf(it) + 1, base = `${String(idx).padStart(2, '0')}-${safeName(nameOf(it))}`, kind = it.kind || 'describe';
+        const body = ['code', 'mermaid', 'csv'].includes(kind) ? codeOf(it.text) : it.text.trim();
+        const result = `results/${base}.${extFor(kind)}`;
+        files.push({ name: result, data: enc.encode(maybeMask(body) + '\n') });
+        let image = '';
+        if (withImg && it.file) {
+          const m = it.file.name.match(/\.([A-Za-z0-9]+)$/); image = `images/${base}.${m ? m[1].toLowerCase() : 'png'}`;
+          files.push({ name: image, data: new Uint8Array(await it.file.arrayBuffer()) });
+        }
+        rows.push({ index: idx, name: nameOf(it), kind, result, image });
+      }
+      files.unshift({ name: 'combined.txt', data: enc.encode(combined.value + '\n') });
+      files.push({ name: 'index.json', data: enc.encode(JSON.stringify(rows, null, 2) + '\n') });
+      files.push({ name: 'README.txt', data: enc.encode('Made with Image Describer.\n\ncombined.txt: everything in one file, ready to paste.\nresults/: one file per image.\nimages/: the original images' + (withImg ? '.' : ' (left out).') + '\nindex.json: which result belongs to which image.\n') });
+      downloadBlob(safeName(docTitle || 'image-describer') + '-results.zip', makeZip(files));
+      toast('Zip downloaded.');
+    } catch (e) { toast('Could not build the zip: ' + ((e && e.message) || 'unknown error')); }
+    btn.textContent = old; btn.disabled = false;
+  });
+
+  /* ---------- tools: AI signals and metadata ---------- */
+  const AI_NAMES = /midjourney|stable[ -]?diffusion|\bsdxl\b|dall[ ·.\-]?e|openai|chatgpt|gpt-?4o|gpt-?image|firefly|\bimagen\b|gemini|nano[ -]?banana|google ai|\bveo\b|black forest|flux\.1|ideogram|leonardo\.?ai|dreamstudio|comfyui|automatic1111|invokeai|novelai|runwayml|\bsora\b|microsoft designer|bing image|meta ai|grok|kling|pika labs|luma ai|dream machine|recraft|playground ai|krea|seedream|hunyuan|qwen-image|stability ai|nightcafe|craiyon|canva (?:ai|magic)|generative fill|generative ai/i;
+  const AI_SOURCE = /(compositeWithTrainedAlgorithmicMedia|trainedAlgorithmicMedia|algorithmicMedia|compositeSynthetic)/g;
+  const clip = (t, n) => { t = String(t).replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n) + '...' : t; };
+  async function inflateBytes(u8) {
+    try { const ds = new DecompressionStream('deflate'), w = ds.writable.getWriter(); w.write(u8); w.close(); return new Uint8Array(await new Response(ds.readable).arrayBuffer()); } catch { return null; }
+  }
+  function ascii(u8, a, b) { let t = ''; for (let i = a; i < b; i++) t += String.fromCharCode(u8[i]); return t; }
+
+  function readExif(u8, start, out) {
+    try {
+      const v = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), le = v.getUint16(start) === 0x4949;
+      const g16 = o => v.getUint16(o, le), g32 = o => v.getUint32(o, le);
+      if (g16(start + 2) !== 42) return;
+      const readIfd = (off, handler) => {
+        const n = g16(off);
+        for (let i = 0; i < n && i < 200; i++) {
+          const e = off + 2 + i * 12, tag = g16(e), type = g16(e + 2), cnt = g32(e + 4);
+          const size = ({ 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1 }[type] || 1) * cnt;
+          const vo = size <= 4 ? e + 8 : start + g32(e + 8);
+          if (vo < 0 || vo + size > u8.length) continue;
+          handler(tag, type, cnt, vo, size);
+        }
+      };
+      const str = (vo, size) => ascii(u8, vo, vo + size).replace(/\0.*$/s, '').trim();
+      let exifPtr = 0;
+      readIfd(start + g32(start + 4), (tag, type, cnt, vo, size) => {
+        if (type === 2) {
+          const t = str(vo, size);
+          if (tag === 0x010F) out.make = t; else if (tag === 0x0110) out.model = t; else if (tag === 0x0131) out.software = t;
+          else if (tag === 0x0132) out.date = t; else if (tag === 0x013B) out.artist = t; else if (tag === 0x8298) out.copyright = t; else if (tag === 0x010E) out.description = t;
+        } else if (tag === 0x8825) out.gps = true; else if (tag === 0x8769) exifPtr = g32(vo);
+      });
+      if (exifPtr) readIfd(start + exifPtr, (tag, type, cnt, vo, size) => {
+        if (tag === 0x9286) {
+          const head = ascii(u8, vo, vo + Math.min(8, size)); let t = '';
+          if (/^UNICODE/.test(head)) { const body = u8.subarray(vo + 8, vo + size); for (const enc of [le ? 'utf-16le' : 'utf-16be', 'utf-16be', 'utf-16le']) { t = new TextDecoder(enc).decode(body); if (/^[\x09\x0a\x0d\x20-\x7e\u00a0-\uffff]{4}/.test(t)) break; } }
+          else t = ascii(u8, vo + (/^ASCII/.test(head) ? 8 : 0), vo + size);
+          out.userComment = t.replace(/\0/g, '').trim();
+        } else if (tag === 0x9003 && type === 2) out.dateOriginal = str(vo, size);
+      });
+    } catch {}
+  }
+
+  async function inspectFile(file) {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const r = { name: file.name, size: file.size, kind: 'unknown', w: 0, h: 0, exif: {}, texts: [], c2pa: false, c2paNames: [], c2paActions: [], sources: [], xmpTools: [], xmpAgents: [], sd: '' };
+    const bmp = await createImageBitmap(file).catch(() => null); if (bmp) { r.w = bmp.width; r.h = bmp.height; }
+    const raw = new TextDecoder('latin1').decode(buf);
+    const isPng = buf[0] === 0x89 && buf[1] === 0x50, isJpg = buf[0] === 0xFF && buf[1] === 0xD8, isWebp = ascii(buf, 0, 4) === 'RIFF' && ascii(buf, 8, 12) === 'WEBP';
+    r.kind = isPng ? 'PNG' : isJpg ? 'JPEG' : isWebp ? 'WebP' : /^GIF8/.test(ascii(buf, 0, 4)) ? 'GIF' : /ftyp(heic|heix|avif|mif1)/.test(raw.slice(4, 16)) ? 'HEIC or AVIF' : (file.type || 'unknown');
+    // format-specific readers
+    if (isJpg) {
+      let p = 2;
+      while (p + 4 < buf.length && buf[p] === 0xFF) {
+        const m = buf[p + 1]; if (m === 0xDA || m === 0xD9) break;
+        const len = (buf[p + 2] << 8) | buf[p + 3];
+        if (m === 0xE1 && ascii(buf, p + 4, p + 10) === 'Exif\0\0') readExif(buf, p + 10, r.exif);
+        p += 2 + len;
+      }
+    } else if (isPng) {
+      let p = 8;
+      while (p + 12 <= buf.length) {
+        const len = new DataView(buf.buffer, buf.byteOffset + p, 4).getUint32(0), type = ascii(buf, p + 4, p + 8), a = p + 8, b = a + len;
+        if (b > buf.length) break;
+        if (type === 'tEXt') { const z = buf.indexOf(0, a); if (z > a && z < b) r.texts.push({ key: ascii(buf, a, z), text: ascii(buf, z + 1, b) }); }
+        else if (type === 'zTXt') { const z = buf.indexOf(0, a); if (z > a && z < b) { const d = await inflateBytes(buf.subarray(z + 2, b)); if (d) r.texts.push({ key: ascii(buf, a, z), text: new TextDecoder().decode(d) }); } }
+        else if (type === 'iTXt') {
+          const z = buf.indexOf(0, a);
+          if (z > a && z < b) {
+            const comp = buf[z + 1]; let q = z + 3; q = buf.indexOf(0, q) + 1; q = buf.indexOf(0, q) + 1;
+            const body = buf.subarray(q, b), t = comp ? await inflateBytes(body) : body;
+            if (t) r.texts.push({ key: ascii(buf, a, z), text: new TextDecoder().decode(t) });
+          }
+        } else if (type === 'eXIf') readExif(buf, a, r.exif);
+        else if (type === 'caBX') r.c2pa = true;
+        p = b + 4;
+      }
+    } else if (isWebp) {
+      let p = 12;
+      while (p + 8 <= buf.length) {
+        const type = ascii(buf, p, p + 4), len = new DataView(buf.buffer, buf.byteOffset + p + 4, 4).getUint32(0, true), a = p + 8;
+        if (type === 'EXIF') readExif(buf, a + (ascii(buf, a, a + 4) === 'Exif' ? 6 : 0), r.exif);
+        if (type === 'C2PA') r.c2pa = true;
+        p = a + len + (len & 1);
+      }
+    }
+    // XMP and Content Credentials: scan the whole file so every format is covered
+    const xa = raw.indexOf('<x:xmpmeta'), xb = xa >= 0 ? raw.indexOf('</x:xmpmeta>', xa) : -1;
+    const xmp = xa >= 0 && xb > xa ? new TextDecoder().decode(buf.subarray(xa, xb + 12)) : '';
+    const pick = (re, src) => { const out = []; let m; const g = new RegExp(re.source, 'g'); while ((m = g.exec(src)) && out.length < 6) out.push((m[1] || m[2] || '').trim()); return out.filter(Boolean); };
+    r.xmpTools = pick(/xmp:CreatorTool(?:="([^"]*)"|>([^<]*)<)/, xmp);
+    r.xmpAgents = pick(/stEvt:softwareAgent(?:="([^"]*)"|>([^<]*)<)/, xmp);
+    if (/jumb/.test(raw) && /c2pa/.test(raw)) r.c2pa = true;
+    const srcHits = (raw.match(AI_SOURCE) || []); r.sources = [...new Set(srcHits)];
+    if (r.c2pa) {
+      const i0 = Math.max(0, raw.indexOf('c2pa') - 2000), region = raw.slice(i0, i0 + 80000);
+      const runs = [...new Set(region.match(/[\x20-\x7e]{5,}/g) || [])];
+      r.c2paActions = [...new Set(region.match(/c2pa\.[a-z_]+(?:\.[a-z_]+)*/g) || [])].slice(0, 8);
+      const near = x => { const m = x.match(AI_NAMES); if (!m) return clip(x, 60); return clip(x.slice(m.index, m.index + m[0].length + 24).replace(/\.{2,}.*$/, ''), 60); };
+      r.c2paNames = [...new Set(runs.filter(x => AI_NAMES.test(x) || /adobe|photoshop|lightroom|truepic|leica|sony|nikon|canon|samsung|microsoft|google/i.test(x)).map(near))].slice(0, 8);
+    }
+    const sd = r.texts.find(t => t.key === 'parameters' && /Steps:\s*\d+/.test(t.text));
+    if (sd) r.sd = sd.text; else if (r.exif.userComment && /Steps:\s*\d+.*Sampler/s.test(r.exif.userComment)) r.sd = r.exif.userComment;
+    else if (r.texts.some(t => t.key === 'prompt' && /^\s*\{/.test(t.text)) && r.texts.some(t => t.key === 'workflow')) r.sd = 'ComfyUI workflow found';
+    return r;
+  }
+
+  function judge(r) {
+    const hints = [];
+    const add = (field, value) => { if (value && AI_NAMES.test(value)) hints.push({ field, value: clip(value, 90) }); };
+    add('The Software tag', r.exif.software); add('The Artist tag', r.exif.artist); add('The picture description', r.exif.description);
+    r.xmpTools.forEach(v => add('The XMP creator tool', v)); r.xmpAgents.forEach(v => add('An XMP edit entry', v));
+    r.texts.forEach(t => { add(`The text field "${t.key}"`, t.key + ' ' + (t.key === 'parameters' || t.key === 'prompt' || t.key === 'workflow' ? '' : t.text)); });
+    r.c2paNames.filter(v => AI_NAMES.test(v)).forEach(v => add('The Content Credentials', v));
+    const seen = new Set(); const uniq = hints.filter(h => !seen.has(h.value.toLowerCase()) && seen.add(h.value.toLowerCase()));
+    const evidence = [];
+    if (r.sources.length) evidence.push('Its "digital source type" label says: ' + r.sources.join(', '));
+    uniq.forEach(h => evidence.push(`${h.field} names: ${h.value}`));
+    const sdTool = r.sd ? (/ComfyUI/.test(r.sd) ? 'ComfyUI' : 'Stable Diffusion tools') : '';
+    if (r.sd) evidence.push('It contains image-generator settings (prompt, steps, sampler), the kind that ' + sdTool + ' write');
+    if (evidence.length) return { level: 'ai', title: 'AI signals found in the file', evidence, hints: uniq, sdTool };
+    if (r.c2pa) return { level: 'cred', title: 'Content Credentials are present, but no AI claim was read', evidence: [], hints: [] };
+    if (r.exif.make || r.exif.model) return { level: 'cam', title: 'Looks like a camera file, judging by its metadata', evidence: [], hints: [] };
+    return { level: 'none', title: 'No AI signals found in the metadata', evidence: [], hints: [] };
+  }
+
+  function renderInspect(r, f) {
+    const v = judge(r), card = document.createElement('div'); card.className = 'icard';
+    const h = document.createElement('h3'); h.textContent = r.name; card.appendChild(h);
+    const t = document.createElement('p'); t.className = 'verdict ' + (v.level === 'ai' ? 'ai' : 'ok');
+    t.textContent = (v.level === 'ai' ? '⚠ ' : v.level === 'none' ? '? ' : 'ℹ ') + v.title; card.appendChild(t);
+    if (v.evidence.length) { const ul = document.createElement('ul'); v.evidence.forEach(e => { const li = document.createElement('li'); li.textContent = e; ul.appendChild(li); }); card.appendChild(ul); }
+    const which = document.createElement('p'); which.style.margin = '0 0 8px';
+    which.textContent = whichStr(v);
+    card.appendChild(which);
+    const rows = [
+      ['File', `${r.kind}, ${(r.size / 1024).toFixed(r.size > 1048576 ? 0 : 1)} KB${r.w ? `, ${r.w} x ${r.h} pixels` : ''}`],
+      ['Camera', [r.exif.make, r.exif.model].filter(Boolean).join(' ') || 'none found'],
+      ['Software', r.exif.software || r.xmpTools.join(', ') || 'none found'],
+      ['Date', r.exif.dateOriginal || r.exif.date || 'none found'],
+      ['Location (GPS)', r.exif.gps ? 'Embedded in the file. Remove it before sharing if that matters.' : 'none found'],
+      ['Content Credentials (C2PA)', r.c2pa ? 'Present. This tool can see they exist but cannot check that they are valid.' : 'none found'],
+      ['Credentials: actions', r.c2paActions.join(', ') || '-'],
+      ['Credentials: names inside', r.c2paNames.join('; ') || '-'],
+      ['Digital source type', r.sources.join(', ') || 'none found'],
+      ['Generator settings', r.sd ? clip(r.sd, 240) : 'none found'],
+      ['Other text fields', r.texts.filter(x => !['parameters', 'prompt', 'workflow'].includes(x.key)).slice(0, 6).map(x => `${x.key}: ${clip(x.text, 60)}`).join(' | ') || 'none found']
+    ];
+    const tb = document.createElement('table');
+    rows.forEach(([k, val]) => { const tr = document.createElement('tr'), th = document.createElement('th'), td = document.createElement('td'); th.textContent = k; td.textContent = val; tr.appendChild(th); tr.appendChild(td); tb.appendChild(tr); });
+    card.appendChild(tb);
+    const note = document.createElement('p'); note.className = 'hint';
+    note.innerHTML = 'Metadata is easy to lose: screenshots, re-saving and many websites remove it, so an empty result does not mean a person made the image. Invisible watermarks such as Google SynthID live in the pixels, and only Google can read them. To check for SynthID, upload the image to the <a href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini app</a> and ask "Was this created with Google AI?" It can only confirm images made with Google\'s tools. To check Content Credentials, use <a href="https://contentcredentials.org/verify" target="_blank" rel="noopener">contentcredentials.org/verify</a>.';
+    card.appendChild(note);
+    const acts = document.createElement('div'); acts.className = 'bar'; acts.style.margin = '8px 0 0';
+    const bd = document.createElement('button'); bd.type = 'button'; bd.className = 'small'; bd.textContent = 'Describe this image'; bd.addEventListener('click', () => addFiles([f]));
+    const bc = document.createElement('button'); bc.type = 'button'; bc.className = 'small'; bc.textContent = 'Copy summary';
+    bc.addEventListener('click', async () => { const t = summaryText(r, v); try { await navigator.clipboard.writeText(t); } catch { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); } toast('Summary copied.'); });
+    acts.append(bd, bc); card.appendChild(acts);
+    return card;
+  }
+  const whichStr = v => v.hints.length ? 'Which AI: the file names ' + [...new Set(v.hints.map(x => x.value))].join('; ') + '.' : v.sdTool ? `Which AI: not named, but the settings format is the one used by ${v.sdTool}.` : v.level === 'ai' ? 'Which AI: the file does not name one.' : 'Which AI: the file does not say.';
+  function summaryText(r, v) {
+    const lines = [r.name, v.title, ...v.evidence.map(e => '- ' + e), whichStr(v)];
+    const add = (k, val) => { if (val) lines.push(`${k}: ${val}`); };
+    add('Camera', [r.exif.make, r.exif.model].filter(Boolean).join(' ')); add('Software', r.exif.software || r.xmpTools.join(', '));
+    if (r.exif.gps) lines.push('Location (GPS): embedded in the file');
+    if (r.c2pa) lines.push('Content Credentials: present (not verified by this tool)');
+    add('Digital source type', r.sources.join(', '));
+    lines.push('Metadata can be removed, so this does not prove who or what made the image.');
+    return lines.join('\n');
+  }
+  function reportObj(r, v) {
+    return { name: r.name, verdict: v.level, title: v.title, evidence: v.evidence, which: whichStr(v), file: { type: r.kind, bytes: r.size, width: r.w, height: r.h },
+      camera: [r.exif.make, r.exif.model].filter(Boolean).join(' ') || null, software: r.exif.software || r.xmpTools.join(', ') || null, gpsEmbedded: !!r.exif.gps,
+      contentCredentials: r.c2pa, credentialActions: r.c2paActions, credentialNames: r.c2paNames, digitalSourceType: r.sources, generatorSettings: r.sd ? clip(r.sd, 500) : null,
+      note: 'Read from file metadata only. Metadata can be removed, so this is not proof of origin.' };
+  }
+  const inspectReports = [];
+  async function runInspect(files) {
+    files = files.filter(f => f.type.startsWith('image/')); if (!files.length) return;
+    const out = $('inspectOut');
+    for (const f of files) {
+      if (f.size > 60 * 1024 * 1024) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = `${f.name} is over 60 MB, so it was skipped.`; out.appendChild(p); continue; }
+      try { const r = await inspectFile(f), v = judge(r); inspectReports.push({ r, v }); out.appendChild(renderInspect(r, f)); }
+      catch (e) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = `Could not read ${f.name}: ${(e && e.message) || 'unknown error'}`; out.appendChild(p); }
+    }
+    $('inspectClear').hidden = $('inspectJson').hidden = !inspectReports.length;
+    $('sr').textContent = `Checked ${files.length} image${files.length === 1 ? '' : 's'}.`;
+  }
+  $('inspectPick').addEventListener('click', () => $('inspectFile').click());
+  $('inspectFile').addEventListener('change', () => { const f = [...$('inspectFile').files]; $('inspectFile').value = ''; runInspect(f); });
+  $('inspectClear').addEventListener('click', () => { $('inspectOut').innerHTML = ''; inspectReports.length = 0; $('inspectClear').hidden = $('inspectJson').hidden = true; });
+  $('inspectJson').addEventListener('click', () => downloadText('ai-signal-report.json', JSON.stringify(inspectReports.map(x => reportObj(x.r, x.v)), null, 2) + '\n', 'application/json'));
+
+  /* ---------- tools: shrink and convert ---------- */
+  let shrunk = [];
+  $('shrinkQ').addEventListener('input', () => { $('shrinkQv').textContent = $('shrinkQ').value; });
+  async function encodeImage(bmp, maxSide, fmt, q, targetKB) {
+    const mime = fmt === 'png' ? 'image/png' : fmt === 'webp' ? 'image/webp' : 'image/jpeg';
+    let scale = maxSide ? Math.min(1, maxSide / Math.max(bmp.width, bmp.height)) : 1;
+    const draw = sc => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * sc)); c.height = Math.max(1, Math.round(bmp.height * sc)); const x = c.getContext('2d'); if (fmt === 'jpeg') { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); } x.drawImage(bmp, 0, 0, c.width, c.height); return c; };
+    const blobOf = (c, quality) => new Promise(r => c.toBlob(r, mime, quality));
+    let c = draw(scale), blob = await blobOf(c, q);
+    if (targetKB) {
+      const limit = targetKB * 1024;
+      for (let attempt = 0; attempt < 8 && blob.size > limit; attempt++) {
+        let best = null;
+        if (fmt !== 'png') { let lo = 0.3, hi = q; for (let i = 0; i < 7; i++) { const m = (lo + hi) / 2, t = await blobOf(c, m); if (t.size <= limit) { best = t; lo = m; } else hi = m; } }
+        if (best) { blob = best; break; }
+        scale *= 0.85; c = draw(scale); blob = await blobOf(c, fmt === 'png' ? undefined : 0.5);
+      }
+    }
+    return { blob, w: c.width, h: c.height };
+  }
+  const fmtSize = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  $('shrinkPick').addEventListener('click', () => $('shrinkFile').click());
+  async function shrinkFiles(files) {
+    files = files.filter(f => f.type.startsWith('image/')); if (!files.length) return;
+    shrunk.forEach(x => { URL.revokeObjectURL(x.url); URL.revokeObjectURL(x.beforeUrl); }); shrunk = [];
+    const out = $('shrinkOut'); out.innerHTML = ''; $('shrinkZip').hidden = $('shrinkSend').hidden = true;
+    const fmt = $('shrinkFmt').value, q = (+$('shrinkQ').value || 82) / 100, ms = +$('shrinkMax').value || 0, tk = +$('shrinkTarget').value || 0;
+    const ext = fmt === 'jpeg' ? 'jpg' : fmt;
+    const fig = (src, cap) => { const f = document.createElement('figure'); f.className = 'thumbfig'; const im = document.createElement('img'); im.src = src; im.alt = cap + ' preview'; const c = document.createElement('figcaption'); c.textContent = cap; f.append(im, c); return f; };
+    for (const f of files) {
+      const status = document.createElement('p'); status.className = 'hint'; status.textContent = `Shrinking ${f.name}...`; out.appendChild(status);
+      try {
+        const bmp = await createImageBitmap(f), res = await encodeImage(bmp, ms, fmt, q, tk);
+        const name = `${safeName(f.name)}-small.${ext}`, url = URL.createObjectURL(res.blob), beforeUrl = URL.createObjectURL(f);
+        shrunk.push({ name, blob: res.blob, url, beforeUrl, before: f.size });
+        status.remove();
+        const row = document.createElement('div'); row.className = 'srow';
+        const meta = document.createElement('div'); meta.className = 'meta hint'; meta.style.margin = 0;
+        const pct = Math.round((1 - res.blob.size / f.size) * 100);
+        meta.textContent = `${name}: ${fmtSize(f.size)} to ${fmtSize(res.blob.size)} (${pct >= 0 ? pct + '% smaller' : Math.abs(pct) + '% larger'}), ${res.w} x ${res.h} px`;
+        const a = document.createElement('a'); a.href = url; a.download = name; a.textContent = 'Download'; a.className = 'dl-link';
+        a.style.cssText = 'padding:4px 12px;border:1px solid var(--line);border-radius:50px;color:var(--gt);text-decoration:none;font-size:13px';
+        row.append(fig(beforeUrl, 'Before'), fig(url, 'After'), meta, a); out.appendChild(row);
+      } catch (e) { status.textContent = `Could not shrink ${f.name}: ${(e && e.message) || 'unknown error'}`; }
+    }
+    if (shrunk.length) { $('shrinkZip').hidden = $('shrinkSend').hidden = false; toast(`Shrunk ${shrunk.length} image${shrunk.length === 1 ? '' : 's'}.`); }
+  }
+  $('shrinkFile').addEventListener('change', () => { const f = [...$('shrinkFile').files]; $('shrinkFile').value = ''; shrinkFiles(f); });
+  $('shrinkZip').addEventListener('click', async () => {
+    const files = []; for (const x of shrunk) files.push({ name: x.name, data: new Uint8Array(await x.blob.arrayBuffer()) });
+    downloadBlob('shrunk-images.zip', makeZip(files));
+  });
+  $('shrinkSend').addEventListener('click', () => {
+    addFiles(shrunk.map(x => new File([x.blob], x.name, { type: x.blob.type })));
+    toast('Added to the Describe tab.');
+  });
+
+  /* ---------- tools: images to one PDF ---------- */
+  async function makePdf(list, mode) {
+    const enc = new TextEncoder(), chunks = [], offs = []; let pos = 0;
+    const push = u8 => { chunks.push(u8); pos += u8.length; };
+    const text = t => enc.encode(t);
+    const obj = (n, parts) => { offs[n] = pos; push(text(`${n} 0 obj\n`)); parts.forEach(push); push(text('\nendobj\n')); };
+    push(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]));
+    const pages = [];
+    for (const it of list) {
+      const bmp = await createImageBitmap(it.file), k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(bmp, 0, 0, c.width, c.height);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+      pages.push({ w: c.width, h: c.height, data: new Uint8Array(await blob.arrayBuffer()) });
+    }
+    const n = pages.length, total = 2 + 3 * n;
+    obj(1, [text('<< /Type /Catalog /Pages 2 0 R >>')]);
+    obj(2, [text(`<< /Type /Pages /Count ${n} /Kids [${pages.map((_, i) => `${3 + 3 * i} 0 R`).join(' ')}] >>`)]);
+    pages.forEach((p, i) => {
+      const pn = 3 + 3 * i, cn = pn + 1, inn = pn + 2;
+      let W, H;
+      if (mode === 'image') { W = p.w * 0.48; H = p.h * 0.48; }
+      else { const [a, b] = mode === 'letter' ? [612, 792] : [595.28, 841.89]; [W, H] = p.w > p.h ? [b, a] : [a, b]; }
+      const k = Math.min(W / p.w, H / p.h), dw = p.w * k, dh = p.h * k, ox = (W - dw) / 2, oy = (H - dh) / 2;
+      const f = v => v.toFixed(2);
+      const content = `q ${f(dw)} 0 0 ${f(dh)} ${f(ox)} ${f(oy)} cm /Im0 Do Q`;
+      obj(pn, [text(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(W)} ${f(H)}] /Resources << /XObject << /Im0 ${inn} 0 R >> >> /Contents ${cn} 0 R >>`)]);
+      obj(cn, [text(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`)]);
+      obj(inn, [text(`<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.data.length} >>\nstream\n`), p.data, text('\nendstream')]);
+    });
+    const xref = pos;
+    let table = `xref\n0 ${total + 1}\n0000000000 65535 f \n`;
+    for (let i = 1; i <= total; i++) table += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+    push(text(table + `trailer\n<< /Size ${total + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`));
+    return new Blob(chunks, { type: 'application/pdf' });
+  }
+  $('pdfMake').addEventListener('click', async () => {
+    const list = items.filter(i => i.file), msg = $('pdfMsg');
+    if (!list.length) { msg.textContent = 'Add some images in the Describe tab first, or drop them on this page.'; return; }
+    const btn = $('pdfMake'); btn.disabled = true; msg.textContent = `Building a PDF from ${list.length} image${list.length === 1 ? '' : 's'}...`;
+    try {
+      const blob = await makePdf(list, $('pdfSize').value);
+      downloadBlob('images.pdf', blob);
+      msg.textContent = `Done: ${list.length} page${list.length === 1 ? '' : 's'}, ${fmtSize(blob.size)}.`;
+      toast('PDF downloaded.');
+    } catch (e) { msg.textContent = 'Could not build the PDF: ' + ((e && e.message) || 'unknown error'); }
+    btn.disabled = false;
+  });
+
+  /* ---------- tabs and routing ---------- */
+  const VIEWS = { home: 'Home', describe: 'Describe', inspect: 'Check AI signals', shrink: 'Shrink', pdf: 'PDF' };
+  const DROP_TEXT = { describe: 'Drop images to describe them', home: 'Drop images to describe them', inspect: 'Drop images to check them', shrink: 'Drop images to shrink them', pdf: 'Drop images to add them to the PDF list' };
+  let currentView = 'home';
+  const viewFromHash = () => { const h = location.hash.replace('#', ''); return VIEWS[h] ? h : null; };
+  function showView(name, focus, mode) {
+    if (!VIEWS[name]) name = 'home';
+    Object.keys(VIEWS).forEach(v => { $('view-' + v).hidden = v !== name; });
+    document.querySelectorAll('#tabs a').forEach(a => { const on = a.dataset.tab === name; a.classList.toggle('on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    document.title = name === 'home' ? 'Image Describer' : VIEWS[name] + ' - Image Describer';
+    try { if (mode === 'push' && viewFromHash() !== name) history.pushState(null, '', '#' + name); else if (mode === 'replace') history.replaceState(null, '', '#' + name); } catch {}
+    if (name !== 'home') { try { localStorage.setItem('ids_lasttool', name); } catch {} }
+    currentView = name; document.body.dataset.view = name;
+    if (focus) { window.scrollTo(0, 0); const h = $('view-' + name).querySelector('.viewh'); if (h) h.focus({ preventScroll: true }); }
+  }
+  window.addEventListener('hashchange', () => { const v = viewFromHash(); if (v) showView(v, true); else if (!location.hash) showView('home', true); });
+  function routeFiles(fl) {
+    const files = [...fl], imgs = files.filter(f => f.type.startsWith('image/'));
+    if (currentView === 'inspect') { runInspect(imgs); return; }
+    if (currentView === 'shrink') { shrinkFiles(imgs); return; }
+    if (currentView === 'pdf') {
+      const before = items.length; addFiles(files, true);
+      const n = items.length - before; $('pdfMsg').textContent = n ? `Added ${n} image${n === 1 ? '' : 's'}. There are ${items.filter(i => i.file).length} in the list now.` : 'Those files were not images.';
+      return;
+    }
+    addFiles(files);
+  }
+  // In-page links are handled here, so they also work when the page is shown inside a sandboxed frame.
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a || e.defaultPrevented) return;
+    const id = a.getAttribute('href').slice(1);
+    if (VIEWS[id]) { e.preventDefault(); showView(id, true, 'push'); return; }
+    const t = id && document.getElementById(id);
+    if (t) { e.preventDefault(); t.scrollIntoView(); if (t.tabIndex >= 0) t.focus({ preventScroll: true }); }
+  });
+  // Display menu
+  const dispBtn = $('dispBtn'), dispPanel = $('dispPanel');
+  const closeDisp = () => { dispPanel.hidden = true; dispBtn.setAttribute('aria-expanded', 'false'); };
+  dispBtn.addEventListener('click', e => { e.stopPropagation(); const open = dispPanel.hidden; dispPanel.hidden = !open; dispBtn.setAttribute('aria-expanded', String(open)); });
+  document.addEventListener('click', e => { if (!dispPanel.hidden && !$('disp').contains(e.target)) closeDisp(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !dispPanel.hidden) { closeDisp(); dispBtn.focus(); } });
+  function initRouter() {
+    let v = viewFromHash(), mode = 'none';
+    if (!v) { let last = null; try { last = localStorage.getItem('ids_lasttool'); } catch {} v = (!location.hash && VIEWS[last]) ? last : 'home'; mode = location.hash ? 'none' : 'replace'; }
+    showView(v, false, mode);
+  }
+
+  /* ---------- video frames ---------- */
+  async function addVideo(file) {
+    const n = Math.max(2, Math.min(20, parseInt($('videoFrames').value, 10) || 6));
+    pdfNote.textContent = `Reading ${file.name}...`;
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto';
+    const url = URL.createObjectURL(file); v.src = url;
+    const once = (ev, act) => new Promise((res, rej) => { v.addEventListener(ev, res, { once: true }); v.addEventListener('error', () => rej(new Error('this video format is not supported by your browser')), { once: true }); act && act(); });
+    try {
+      await once('loadedmetadata');
+      if (!isFinite(v.duration)) { await once('durationchange', () => { v.currentTime = 1e9; }).catch(() => {}); v.currentTime = 0; await once('seeked').catch(() => {}); }
+      const dur = v.duration;
+      if (!isFinite(dur) || dur <= 0) throw new Error('could not read the video length');
+      const sc = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight)), base = file.name.replace(/\.[^.]+$/, '');
+      for (let i = 0; i < n; i++) {
+        const t = Math.min(dur - 0.05, dur * (i + 0.5) / n);
+        pdfNote.textContent = `Reading ${file.name}: frame ${i + 1} of ${n}...`;
+        await once('seeked', () => { v.currentTime = Math.max(0, t); });
+        const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * sc); c.height = Math.round(v.videoHeight * sc);
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+        const ff = new File([blob], `${base}-frame-${i + 1}-at-${Math.round(t)}s.jpg`, { type: 'image/jpeg', lastModified: file.lastModified });
+        items.push({ id: nextId++, file: ff, key: `${fileKey(file)}|f${i + 1}of${n}`, url: URL.createObjectURL(ff), thumb: '', text: '', review: '', status: 'Ready', err: false });
+        render();
+      }
+      pdfNote.textContent = `Read ${n} frames from ${file.name}, spread evenly across the video.`;
+    } catch (e) {
+      pdfNote.textContent = `Could not read ${file.name}: ${(e && e.message) || 'unknown error'}`;
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  renderPresets(''); renderUsage();
+  /* ---------- toast, previews, helpers ---------- */
+  let toastTimer = 0, toastUndo = null;
+  function hideToast() { clearTimeout(toastTimer); $('toast').hidden = true; if (toastUndo) { const f = toastUndo; toastUndo = null; f(); } }
+  function toast(msg, act) {
+    clearTimeout(toastTimer);
+    if (toastUndo) { const f = toastUndo; toastUndo = null; f(); }
+    $('toastMsg').textContent = msg;
+    const b = $('toastAct'); b.hidden = !act;
+    if (act) { b.textContent = act.label; b.onclick = () => { act.fn(); hideToast(); }; }
+    $('toast').hidden = false;
+    toastTimer = setTimeout(hideToast, act ? 9000 : 3500);
+  }
+  function previewImage(it) {
+    const body = $('prevBody'); body.innerHTML = ''; $('prevTitle').textContent = nameOf(it);
+    const im = document.createElement('img'); im.src = it.url; im.alt = `Larger preview of ${nameOf(it)}`;
+    im.style.cssText = 'display:block;max-width:100%;max-height:72vh;margin:0 auto;border-radius:10px';
+    body.appendChild(im); $('prev').showModal();
+  }
+  function openSection(id) {
+    const t = $(id); if (!t) return;
+    if (t.tagName === 'DETAILS') t.open = true;
+    t.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }
+  window.addEventListener('scroll', () => { document.body.classList.toggle('working', items.length > 0 || window.scrollY > innerHeight * 0.35); document.body.classList.toggle('scrolled', window.scrollY > 40); }, { passive: true });
+  $('splitNow').addEventListener('click', () => { $('split').click(); $('parts').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
+
+  /* ---------- key test and first-run guide ---------- */
+  $('keyTest').addEventListener('click', async () => {
+    const key = $('key').value.trim(), out = $('keyMsg');
+    if (!key) { out.textContent = 'Paste your key first.'; $('key').focus(); return; }
+    out.textContent = 'Testing...';
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', { headers: { 'x-goog-api-key': key } });
+      const j = await readJson(r);
+      out.textContent = r.ok ? 'Key works. You can add images now.' : 'That key was not accepted: ' + String(j?.error?.message || r.statusText).slice(0, 120);
+    } catch { out.textContent = 'Could not reach Google. Check your internet connection.'; }
+  });
+  const syncGuide = () => { $('guide').hidden = !!$('key').value.trim(); };
+  $('key').addEventListener('input', syncGuide); syncGuide();
+
+  /* ---------- contrast ---------- */
+  const rootEl = document.documentElement, cBtn = $('contrastToggle');
+  function setContrast(v, save) {
+    if (v === 'high') rootEl.dataset.contrast = 'high'; else delete rootEl.dataset.contrast;
+    cBtn.textContent = 'Contrast: ' + (v === 'high' ? 'high' : 'normal'); cBtn.setAttribute('aria-pressed', String(v === 'high'));
+    if (save) { try { localStorage.setItem('contrast', v); } catch {} }
+  }
+  cBtn.addEventListener('click', () => setContrast(rootEl.dataset.contrast === 'high' ? 'normal' : 'high', true));
+  setContrast(rootEl.dataset.contrast === 'high' ? 'high' : 'normal', false);
+
+  /* ---------- remember the last settings, and summarize the hidden ones ---------- */
+  const LKEY = 'ids_last_v1';
+  const LAST = PFIELDS.filter(id => id !== 'question').concat(['model', 'gmodel', 'omodel', 'splitMax']);
+  function saveLast() {
+    const o = {}; LAST.forEach(id => { const el = $(id); o[id] = el.type === 'checkbox' ? el.checked : el.value; });
+    try { localStorage.setItem(LKEY, JSON.stringify(o)); } catch {}
+  }
+  function restoreLast() {
+    try {
+      const o = JSON.parse(localStorage.getItem(LKEY) || 'null'); if (!o) return;
+      LAST.forEach(id => { if (!(id in o)) return; const el = $(id); if (el.type === 'checkbox') el.checked = !!o[id]; else el.value = o[id]; });
+    } catch {}
+  }
+  LAST.forEach(id => { const el = $(id); el.addEventListener('change', saveLast); if (el.tagName === 'INPUT' && el.type === 'text') el.addEventListener('input', saveLast); });
+  PFIELDS.forEach(id => { const el = $(id); el.addEventListener('change', estimate); if (el.tagName === 'INPUT' && el.type === 'text') el.addEventListener('input', estimate); });
+  restoreLast(); syncOut();
+
+  estimate();
+
+  /* ---------- copy ---------- */
+  async function copyItem(it, b) {
+    const t = codeOf(it.text);
+    try { await navigator.clipboard.writeText(t); }
+    catch { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    const old = b.textContent; b.textContent = 'Copied'; setTimeout(() => { b.textContent = old; }, 1500);
+  }
+
+  /* ---------- accuracy test: can an AI answer questions about the image from the text alone? ---------- */
+  const ACC_Q = `Look at the image. Write 8 specific factual questions that test whether someone who only read a text description of this image would know its details. Mix them: 2 about visible text or numbers, 2 about colors, 2 about positions or layout, 1 about a count, and 1 about a small detail. Every question must have one short, certain answer that can be seen in the image. Output ONLY a JSON array like [{"q":"question","a":"answer"}] with no other text.`;
+  const accAnswerPrompt = (desc, qs) => `Below is a written description of an image, followed by questions. Answer each question using ONLY the description. If the description does not say, answer exactly "not stated". Output ONLY a JSON array of strings, one answer per question in the same order, with no other text.\n\nDESCRIPTION:\n${desc}\n\nQUESTIONS:\n${qs.map((x, i) => `${i + 1}. ${x.q}`).join('\n')}`;
+  const accJudgePrompt = (qs, ans) => `Grade each given answer against the true answer. Use exactly one verdict per item: "correct" (same meaning), "partly" (some right, some missing or off), "wrong", or "not stated" (the given answer says it is not stated). Output ONLY a JSON array of verdict strings in the same order, with no other text.\n\n${qs.map((x, i) => `${i + 1}. Question: ${x.q}\nTrue answer: ${x.a}\nGiven answer: ${ans[i] == null ? 'not stated' : ans[i]}`).join('\n\n')}`;
+  const parseJson = t => { const m = String(t).match(/\[[\s\S]*\]/); if (!m) throw new Error('The AI did not return the expected list.'); return JSON.parse(m[0]); };
+  const acc = $('acc');
+  let accItem = null, accGaps = [];
+
+  async function accuracyTest(it) {
+    const chain = getChain(); if (!chain) return;
+    accItem = it; accGaps = [];
+    const body = $('accBody'); body.innerHTML = '';
+    $('accTitle').textContent = 'Accuracy test: ' + nameOf(it);
+    const info = document.createElement('p'); info.className = 'hint'; info.setAttribute('role', 'status'); info.style.marginTop = '0'; body.appendChild(info);
+    $('accFix').hidden = true; acc.showModal();
+    const say = s => { info.textContent = s; };
+    try {
+      const img = await prepare(it.file);
+      const r1 = await callWait(ACC_Q, [img], chain, s => say('Step 1 of 3, writing questions from the image: ' + s));
+      const qs = parseJson(r1.text); const other = preferOther(chain, r1.model);
+      if (!Array.isArray(qs) || qs.length < 3 || !qs.every(x => x && x.q && x.a != null)) throw new Error('The AI returned unusable questions. Try again.');
+      const answers = parseJson((await callWait(accAnswerPrompt(it.text, qs), [], other, s => say('Step 2 of 3, answering from the description only (the AI does not see the image): ' + s))).text);
+      const verdicts = parseJson((await callWait(accJudgePrompt(qs, answers), [], other, s => say('Step 3 of 3, grading: ' + s))).text);
+      showAcc(info, qs, answers, verdicts);
+    } catch (e) { say('Could not finish the test. ' + (e.code ? errText(e) : (e.message || ''))); }
+  }
+
+  function showAcc(info, qs, answers, verdicts) {
+    const cat = v => { v = String(v || '').toLowerCase(); return v.includes('not stated') ? 'ns' : v.startsWith('correct') ? 'ok' : v.startsWith('part') ? 'part' : 'bad'; };
+    const label = { ok: '✓ correct', part: '~ partly', bad: '✗ wrong', ns: '? not stated' };
+    const rows = qs.map((x, i) => ({ q: String(x.q), a: String(x.a), given: String(answers[i] == null ? 'not stated' : answers[i]), c: cat(verdicts[i]) }));
+    const n = rows.length, count = k => rows.filter(r => r.c === k).length;
+    const score = Math.round((count('ok') + 0.5 * count('part')) / n * 100);
+    info.textContent = `Estimated accuracy: ${score}% (${count('ok')} correct, ${count('part')} partly, ${count('bad')} wrong, ${count('ns')} not stated). An AI graded this, so treat it as a guide.`;
+    const wrap = document.createElement('div'); wrap.className = 'csvwrap acctable';
+    const table = document.createElement('table');
+    const head = document.createElement('tr');
+    ['Question', 'True answer (from the image)', 'Answer from the description', 'Result'].forEach(h => { const th = document.createElement('th'); th.textContent = h; head.appendChild(th); });
+    table.appendChild(head);
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      [r.q, r.a, r.given, label[r.c]].forEach((t, i) => { const td = document.createElement('td'); td.textContent = t; if (i === 3) td.className = r.c === 'ok' ? 'v-good' : 'v-bad'; tr.appendChild(td); });
+      table.appendChild(tr);
+    });
+    wrap.appendChild(table); $('accBody').appendChild(wrap);
+    accGaps = rows.filter(r => r.c !== 'ok');
+    const fix = $('accFix'); fix.hidden = !accGaps.length; fix.disabled = false;
+  }
+  $('accFix').addEventListener('click', () => {
+    if (!accItem || !accGaps.length) return;
+    const lines = accGaps.map(g => `- ${g.q} ${g.a}`).join('\n');
+    accItem.text += `\n\nADDED DETAILS (facts the accuracy test found missing or wrong, taken from the image):\n${lines}`;
+    saveHist(accItem); render();
+    $('accFix').hidden = true;
+    const p = document.createElement('p'); p.className = 'hint'; p.textContent = `Added ${accGaps.length} fact${accGaps.length === 1 ? '' : 's'} to the description. Run the test again to see the new score.`;
+    $('accBody').appendChild(p);
+  });
+  $('accClose').addEventListener('click', () => acc.close());
+
+  /* ---------- what to make ---------- */
+  function syncOut() {
+    const d = $('out').value === 'describe';
+    ['mode', 'detail', 'verify', 'ocr', 'tiles'].forEach(id => { $(id).disabled = !d; });
+    $('lang').disabled = ['code', 'mermaid', 'csv', 'genprompt'].includes($('out').value);
+  }
+  $('out').addEventListener('change', syncOut); syncOut();
+
+  /* ---------- preview and download for code, diagrams and data ---------- */
+  const codeOf = t => { const m = String(t).match(/```[\w-]*\n([\s\S]*?)```/); return (m ? m[1] : String(t)).trim(); };
+  function parseCsv(t) {
+    const rows = []; let row = [], f = '', q = false;
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+      else if (c === '"') q = true;
+      else if (c === ',') { row.push(f); f = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(f); f = ''; rows.push(row); row = []; }
+      else f += c;
+    }
+    if (f !== '' || row.length) { row.push(f); rows.push(row); }
+    return rows.filter(r => r.some(c => c.trim() !== ''));
+  }
+  const prev = $('prev');
+  function previewItem(it) {
+    const body = $('prevBody'); body.innerHTML = '';
+    $('prevTitle').textContent = 'Preview: ' + nameOf(it);
+    const code = codeOf(it.text);
+    if (it.kind === 'code') {
+      const f = document.createElement('iframe'); f.className = 'prevframe'; f.title = 'HTML preview';
+      f.setAttribute('sandbox', ''); f.srcdoc = code; body.appendChild(f);
+    } else if (it.kind === 'mermaid') {
+      const f = document.createElement('iframe'); f.className = 'prevframe'; f.title = 'Diagram preview';
+      f.setAttribute('sandbox', 'allow-scripts');
+      const esc = v => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      f.srcdoc = '<!doctype html><meta charset="utf-8"><body style="margin:16px;background:#fff;font-family:system-ui,sans-serif"><pre class="mermaid">' + esc(code) +
+        '</pre><script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.min.js"><\/script><script>mermaid.initialize({startOnLoad:true,securityLevel:"strict"});<\/script></body>';
+      body.appendChild(f);
+    } else {
+      const wrap = document.createElement('div'); wrap.className = 'csvwrap';
+      const table = document.createElement('table');
+      parseCsv(code).forEach((r, i) => {
+        const tr = document.createElement('tr');
+        r.forEach(c => { const cell = document.createElement(i === 0 ? 'th' : 'td'); cell.textContent = c; tr.appendChild(cell); });
+        table.appendChild(tr);
+      });
+      wrap.appendChild(table); body.appendChild(wrap);
+    }
+    prev.showModal();
+  }
+  function downloadItem(it) {
+    const ext = { code: 'html', mermaid: 'mmd', csv: 'csv' }[it.kind] || 'txt';
+    const mime = { code: 'text/html', mermaid: 'text/plain', csv: 'text/csv' }[it.kind] || 'text/plain';
+    const base = nameOf(it).replace(/\.[^.]+$/, '').replace(/[^\w.-]+/g, '-') || 'image';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([codeOf(it.text)], { type: mime + ';charset=utf-8' }));
+    a.download = `${base}.${ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  }
+  $('prevClose').addEventListener('click', () => prev.close());
+  prev.addEventListener('close', () => { $('prevBody').innerHTML = ''; });
+
+  /* ---------- theme ---------- */
+  const root = document.documentElement, themeBtn = $('themeToggle');
+  function setTheme(t, save) {
+    root.dataset.theme = t;
+    themeBtn.textContent = 'Theme: ' + t;
+    themeBtn.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', t === 'light' ? '#f3f6f4' : '#000000');
+    if (save) { try { localStorage.setItem('theme', t); } catch {} }
+    document.dispatchEvent(new Event('themechange'));
+  }
+  themeBtn.addEventListener('click', () => setTheme(root.dataset.theme === 'light' ? 'dark' : 'light', true));
+  setTheme(root.dataset.theme === 'light' ? 'light' : 'dark', false);
+  if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
+
+  /* ---------- misc ---------- */
+  clearBtn.addEventListener('click', () => {
+    const saved = items.splice(0);
+    $('cmpPanel').hidden = true; render();
+    toast(`Cleared ${saved.length} image${saved.length === 1 ? '' : 's'}.`, { label: 'Undo', fn: () => { toastUndo = null; items.push(...saved); render(); } });
+    toastUndo = () => saved.forEach(i => { if (i.file) URL.revokeObjectURL(i.url); });
+  });
+  $('copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(combined.value); } catch { combined.select(); document.execCommand('copy'); }
+    $('copy').textContent = 'Copied'; setTimeout(() => $('copy').textContent = 'Copy', 1500);
+    toast('Copied to the clipboard. Paste it into your chat.');
+  });
+  $('save').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([combined.value], { type: 'text/plain' }));
+    a.download = 'image-descriptions.txt'; a.click(); URL.revokeObjectURL(a.href);
+  });
+initRouter();
+})();
+</script>
+</body>
+</html>
