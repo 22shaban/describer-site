@@ -4,7 +4,7 @@
 
 Turn images, screenshots, PDFs and short videos into text that you can paste into any AI chat, so you don't have to attach the image. It runs entirely in the browser: no server, no build step, no accounts.
 
-**Live demo:** https://22shaban.github.io/describer-site/ (also on Cloudflare: https://imagedescriber.shabanshaikhit.workers.dev)
+**Live demo:** https://22shaban.github.io/describer-site/ (also on Cloudflare: https://id.shabanshaikhit.workers.dev)
 
 ![Image Describer home screen with four tool cards](docs/screenshots/home.png)
 
