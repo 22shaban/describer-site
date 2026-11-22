@@ -56,3 +56,7 @@ Never put an API key in these files.
 ## Built with
 
 Plain HTML, CSS and JavaScript. Tesseract.js, pdf.js and Mermaid are loaded from jsDelivr only when used. Built with AI assistance.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
